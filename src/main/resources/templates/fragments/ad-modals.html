@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="create-ad-modal" 
+     class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+     onclick="if(event.target === this) document.getElementById('modal-container').innerHTML = ''">
+
+    <div class="relative max-w-lg w-full bg-zinc-950 rounded-2xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <form th:action="@{/ads/create}" method="post" enctype="multipart/form-data" class="flex-1 flex flex-col overflow-hidden">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-white">Create Marketplace Offer</h2>
+                    <p class="text-[11px] text-zinc-500">Requires Admin Approval before going live</p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-container').innerHTML = ''" class="text-zinc-400 hover:text-white p-1 rounded-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-3.5 overflow-y-auto flex-1 text-xs">
+                <div>
+                    <label class="block font-semibold text-zinc-300 mb-1">Headline</label>
+                    <input type="text" name="title" required maxlength="100" placeholder="e.g. 50% Off Cloud Hosting"
+                           class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-zinc-300 mb-1">Description</label>
+                    <textarea name="description" rows="3" maxlength="300" placeholder="Details about your promotion..."
+                              class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-indigo-500 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-zinc-300 mb-1">Target Landing Page URL</label>
+                    <input type="url" name="targetUrl" required placeholder="https://example.com/offer"
+                           class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-zinc-300 mb-1">Banner Creative (Image)</label>
+                    <input type="file" name="media" accept="image/*"
+                           class="w-full text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer" />
+                </div>
+            </div>
+
+            <div class="p-3 border-t border-zinc-800 bg-zinc-950 flex justify-end">
+                <button type="submit" class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white font-semibold px-5 py-2 rounded-full text-xs transition shadow-md shadow-indigo-500/20 active:scale-95">
+                    Submit for Approval
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

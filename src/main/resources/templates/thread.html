@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post / Nexus</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" th:href="@{/css/animations.css}" />
+    <script th:src="@{/js/app.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#08080c] text-zinc-100 min-h-screen antialiased">
+    <div class="max-w-[1320px] mx-auto flex justify-center min-h-screen">
+        
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='home')}"></div>
+
+        <main class="w-full max-w-[640px] flex-1 border-r border-zinc-800/80 min-h-screen pb-16 bg-zinc-950/30">
+            <!-- Header -->
+            <div class="sticky top-0 bg-[#08080c]/85 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center space-x-6 z-20">
+                <a th:href="@{/home}" class="hover:bg-zinc-800/60 p-2 rounded-full transition">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                </a>
+                <h1 class="text-lg font-bold text-white">Post</h1>
+            </div>
+
+            <!-- Parent Post if Threaded -->
+            <div th:if="${thread.parentTweet != null}" class="p-4 border-b border-zinc-800/50 hover:bg-zinc-800/20 relative">
+                <div class="absolute left-8 top-14 bottom-0 w-0.5 bg-zinc-700"></div>
+                <div class="flex space-x-3">
+                    <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shrink-0 z-10 text-xs shadow"
+                         th:text="${thread.parentTweet.authorUsername != null and !thread.parentTweet.authorUsername.isEmpty() ? thread.parentTweet.authorUsername.substring(0, 1).toUpperCase() : 'U'}">U</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2">
+                            <a th:href="|/u/${thread.parentTweet.authorUsername}|" class="font-bold text-xs text-white hover:underline" th:text="${thread.parentTweet.authorDisplayName}">Parent</a>
+                            <span class="text-zinc-500 text-xs" th:text="|@${thread.parentTweet.authorUsername}|">@parent</span>
+                        </div>
+                        <p class="mt-1 text-zinc-300 text-xs" th:utext="${tweetTextProcessor != null ? tweetTextProcessor.formatContentWithLinks(thread.parentTweet.content) : thread.parentTweet.content}"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Focused Post -->
+            <div class="p-5 border-b border-zinc-800/80">
+                <div class="flex items-center space-x-3 mb-3">
+                    <div class="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-lg text-white shadow-inner"
+                         th:text="${thread.focalTweet.authorUsername != null and !thread.focalTweet.authorUsername.isEmpty() ? thread.focalTweet.authorUsername.substring(0, 1).toUpperCase() : 'U'}">U</div>
+                    <div>
+                        <a th:href="|/u/${thread.focalTweet.authorUsername}|" class="font-bold text-sm text-white hover:underline block" th:text="${thread.focalTweet.authorDisplayName}">User</a>
+                        <span class="text-zinc-500 text-xs" th:text="|@${thread.focalTweet.authorUsername}|">@user</span>
+                    </div>
+                </div>
+
+                <p class="text-lg text-zinc-100 break-words leading-relaxed" 
+                   th:utext="${tweetTextProcessor != null ? tweetTextProcessor.formatContentWithLinks(thread.focalTweet.content) : thread.focalTweet.content}"></p>
+
+                <!-- Media -->
+                <div th:if="${thread.focalTweet.imageUrl != null}" 
+                     class="mt-3 overflow-hidden rounded-2xl border border-zinc-800 relative bg-zinc-900 aspect-video cursor-pointer group"
+                     th:hx-get="|/tweets/${thread.focalTweet.id}/lightbox|"
+                     hx-target="#modal-container"
+                     hx-swap="innerHTML">
+                    <img th:src="${thread.focalTweet.imageUrl}" loading="lazy" alt="Media" class="w-full h-full object-cover group-hover:opacity-90 transition duration-200" />
+                </div>
+
+                <div class="my-3 text-xs text-zinc-500 border-b border-zinc-800/80 pb-3" 
+                     th:text="${#temporals.format(thread.focalTweet.createdAt, 'h:mm a · MMM d, yyyy')}">Date</div>
+
+                <div class="flex justify-around py-1 border-b border-zinc-800/80 text-zinc-400">
+                    <div th:replace="~{fragments/tweet-components :: like-button(tweet=${thread.focalTweet}, currentUserId=${currentUserId})}"></div>
+                </div>
+            </div>
+
+            <!-- Reply Box -->
+            <div class="p-4 border-b border-zinc-800/80 bg-zinc-900/20">
+                <form th:hx-post="|/tweets/${thread.focalTweet.id}/reply|"
+                      hx-target="#thread-replies-list"
+                      hx-swap="beforeend"
+                      hx-on::after-request="if(event.detail.successful) this.reset()"
+                      class="flex space-x-3">
+                    <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shrink-0 text-xs shadow-inner"
+                         th:text="${currentUsername != null and !currentUsername.isEmpty() ? currentUsername.substring(0, 1).toUpperCase() : 'U'}">U</div>
+                    <div class="flex-1 space-y-2">
+                        <textarea name="content" maxlength="280" required placeholder="Post your reply" 
+                                  class="w-full bg-transparent text-sm text-white resize-none outline-none placeholder-zinc-500 h-16"></textarea>
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white font-semibold px-4 py-1 rounded-full text-xs transition shadow-md shadow-indigo-500/20 active:scale-95">Reply</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Replies Stream -->
+            <div id="thread-replies-list" class="divide-y divide-zinc-800/80">
+                <div th:each="reply : ${thread.replies}">
+                    <div th:replace="~{fragments/tweet-components :: tweet-card(tweet=${reply}, currentUserId=${currentUserId})}"></div>
+                </div>
+            </div>
+        </main>
+
+        <div th:replace="~{fragments/sidebar :: right-sidebar}"></div>
+    </div>
+    
+    <div id="modal-container"></div>
+</body>
+</html>

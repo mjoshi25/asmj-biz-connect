@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle + ' / Twitter Clone'}">Explore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" th:href="@{/css/animations.css}" />
+    <script th:src="@{/js/app.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-black text-gray-100 min-h-screen antialiased">
+    <div class="max-w-7xl mx-auto flex justify-center min-h-screen">
+        
+        <!-- Left Nav -->
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='home')}"></div>
+
+        <main class="w-full max-w-2xl border-r border-gray-800 min-h-screen pb-16 bg-black/60 backdrop-blur">
+            <div class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-2.5 flex items-center space-x-6 z-20">
+                <a th:href="@{/home}" class="hover:bg-white/10 p-2 rounded-full transition">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                </a>
+                <h1 class="text-xl font-bold text-white" th:text="${pageTitle}">Explore</h1>
+            </div>
+
+            <div class="divide-y divide-gray-800">
+                <div th:if="${#lists.isEmpty(tweets.content)}" class="p-16 text-center text-gray-500 text-sm">
+                    No tweets found matching this search or topic.
+                </div>
+                <div th:each="tweet : ${tweets.content}">
+                    <div th:replace="~{fragments/tweet-components :: tweet-card(tweet=${tweet}, currentUserId=${currentUserId})}"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar -->
+        <div th:replace="~{fragments/sidebar :: right-sidebar}"></div>
+    </div>
+    <div id="modal-container"></div>
+</body>
+</html>

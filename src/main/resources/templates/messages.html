@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages / Nexus</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <link rel="stylesheet" th:href="@{/css/animations.css}" />
+    <script th:src="@{/js/app.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#08080c] text-zinc-100 min-h-screen antialiased">
+    
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-3 pointer-events-none max-w-sm w-full"></div>
+
+    <div class="max-w-[1320px] mx-auto flex justify-center min-h-screen">
+        
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='messages')}"></div>
+
+        <main class="w-full max-w-[990px] flex-1 border-r border-zinc-800/80 min-h-screen flex bg-zinc-950/20">
+            
+            <!-- Left Pane: Conversations -->
+            <div class="w-72 sm:w-80 border-r border-zinc-800/80 flex flex-col h-screen sticky top-0 bg-[#08080c]/60 backdrop-blur-sm">
+                <div class="p-3.5 border-b border-zinc-800/80 flex items-center justify-between">
+                    <span class="font-bold text-base text-white">Messages</span>
+                    
+                    <button type="button" 
+                            hx-get="/messages/modal/new"
+                            hx-target="#modal-container"
+                            hx-swap="innerHTML"
+                            class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white p-2 rounded-xl transition shadow-md shadow-indigo-500/20 active:scale-95"
+                            title="New Conversation">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto divide-y divide-zinc-800/50 p-1" id="conversations-list">
+                    <div th:if="${#lists.isEmpty(conversations)}" class="p-8 text-center text-zinc-500 text-xs">
+                        No messages yet. Click <strong>+</strong> to start a conversation!
+                    </div>
+
+                    <div th:each="convo : ${conversations}" 
+                         th:hx-get="|/messages/thread/${convo.conversationId}|"
+                         hx-target="#chat-pane"
+                         hx-swap="innerHTML"
+                         onclick="highlightConversation(this)"
+                         class="conversation-item p-3 hover:bg-zinc-800/40 rounded-2xl cursor-pointer flex items-center justify-between transition mb-1">
+                        
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full border border-zinc-700/60 flex items-center justify-center font-bold text-white shrink-0 overflow-hidden text-xs"
+                                 th:classappend="${convo.isGroup} ? 'bg-purple-600' : 'bg-indigo-600'">
+                                <span th:if="${convo.isGroup}">👥</span>
+                                <span th:unless="${convo.isGroup}" th:text="${convo.defaultInitial}">U</span>
+                            </div>
+
+                            <div class="min-w-0">
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="font-bold text-xs text-white truncate" th:text="${convo.title}">Title</span>
+                                    <span th:if="${convo.isGroup}" class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-semibold">Group</span>
+                                </div>
+                                <p class="text-[11px] text-zinc-400 truncate mt-0.5">
+                                    <span th:if="${convo.isGroup and convo.lastSenderName != null}" class="font-semibold text-zinc-300" th:text="|${convo.lastSenderName}: |"></span>
+                                    <span th:text="${convo.lastMessage}">Preview</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-end shrink-0 pl-2">
+                            <span class="text-[10px] text-zinc-500" th:text="${convo.lastMessageTimeFormatted}">Date</span>
+                            <span th:if="${convo.unreadCount > 0}" 
+                                  class="mt-1 bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full"
+                                  th:text="${convo.unreadCount}">1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Pane: Active Chat -->
+            <div id="chat-pane" class="flex-1 h-screen flex flex-col justify-between bg-zinc-950/40">
+                <div th:if="${activeConversation != null}">
+                    <div th:replace="~{fragments/message-components :: chat-thread}"></div>
+                </div>
+                <div th:unless="${activeConversation != null}" class="h-full flex flex-col items-center justify-center p-8 text-center text-zinc-500 space-y-2">
+                    <div class="w-14 h-14 rounded-2xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-center text-zinc-400 mb-2">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                    </div>
+                    <p class="text-base font-bold text-white">Select a conversation</p>
+                    <p class="text-xs text-zinc-400 max-w-xs">Pick an existing chat or click <strong>+</strong> to start a direct or group message.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-container"></div>
+
+    <script>
+        function highlightConversation(element) {
+            document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('bg-zinc-800/70'));
+            element.classList.add('bg-zinc-800/70');
+            setTimeout(window.scrollMessagesToBottom, 150);
+        }
+
+        document.addEventListener("DOMContentLoaded", window.scrollMessagesToBottom);
+    </script>
+</body>
+</html>

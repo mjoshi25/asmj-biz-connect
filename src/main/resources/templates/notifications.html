@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications / Nexus</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" th:href="@{/css/animations.css}" />
+    <script th:src="@{/js/app.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#08080c] text-zinc-100 min-h-screen antialiased">
+    <div class="max-w-[1320px] mx-auto flex justify-center min-h-screen">
+        
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='notifications')}"></div>
+
+        <main class="w-full max-w-[640px] flex-1 border-r border-zinc-800/80 min-h-screen pb-16 bg-zinc-950/30">
+            <div class="sticky top-0 bg-[#08080c]/85 backdrop-blur-md border-b border-zinc-800/80 px-5 py-3.5 flex justify-between items-center z-20">
+                <h1 class="text-lg font-bold text-white">Notifications</h1>
+                <form th:if="${unreadCount > 0}" th:action="@{/notifications/mark-read}" method="post">
+                    <button type="submit" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline">Mark all as read</button>
+                </form>
+            </div>
+
+            <div class="divide-y divide-zinc-800/80">
+                <div th:if="${#lists.isEmpty(notifications.content)}" class="p-16 text-center text-zinc-500 text-xs">
+                    No notifications right now.
+                </div>
+                <div th:each="notif : ${notifications.content}" 
+                     class="p-4 hover:bg-zinc-800/20 transition flex space-x-3.5"
+                     th:classappend="${!notif.isRead} ? 'bg-indigo-500/5' : ''">
+                    <div class="text-indigo-400 text-lg font-bold shrink-0 pt-0.5">@</div>
+                    <div class="flex-1 min-w-0 space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <a th:href="|/u/${notif.actorUsername}|" class="font-bold text-xs text-white hover:underline truncate" th:text="${notif.actorDisplayName}">User</a>
+                            <span class="text-zinc-500 text-[11px] truncate" th:text="|@${notif.actorUsername}|">@handle</span>
+                            <span class="text-zinc-600 text-xs">·</span>
+                            <span class="text-zinc-500 text-[11px]" th:text="${#temporals.format(notif.createdAt, 'MMM d, HH:mm')}">Date</span>
+                        </div>
+                        <p class="text-zinc-300 text-xs">Mentioned you in a <a th:href="|/tweets/${notif.targetTweetId}/thread|" class="text-indigo-400 hover:underline font-medium">post</a>:</p>
+                        <p class="text-zinc-400 text-xs italic bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80 break-words" th:text="'&ldquo;' + ${notif.snippet} + '&rdquo;'"></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div th:replace="~{fragments/sidebar :: right-sidebar}"></div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="image-modal(tweet, currentUserId)" 
+     id="lightbox-backdrop"
+     class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-fadeIn"
+     onclick="if(event.target === this) document.getElementById('modal-container').innerHTML = ''"
+     tabindex="0"
+     onkeydown="if(event.key === 'Escape') document.getElementById('modal-container').innerHTML = ''">
+
+    <button type="button" 
+            onclick="document.getElementById('modal-container').innerHTML = ''"
+            class="absolute top-4 left-4 text-white/80 hover:text-white bg-black/50 hover:bg-gray-800 p-2.5 rounded-full transition z-10">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+
+    <div class="relative max-w-6xl w-full max-h-[90vh] flex flex-col lg:flex-row bg-gray-950 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
+        <div class="flex-1 bg-black flex items-center justify-center min-h-[300px] lg:min-h-[550px] p-2">
+            <img th:src="${tweet.imageUrl}" 
+                 alt="Media" 
+                 class="max-h-[85vh] w-auto max-w-full object-contain rounded-lg" />
+        </div>
+
+        <div class="w-full lg:w-96 p-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-gray-800 bg-gray-950">
+            <div>
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-sky-600 flex items-center justify-center font-bold text-white shrink-0"
+                         th:text="${tweet.authorUsername != null and !tweet.authorUsername.isEmpty() ? tweet.authorUsername.substring(0, 1).toUpperCase() : 'U'}">U</div>
+                    <div class="min-w-0">
+                        <a th:href="|/u/${tweet.authorUsername}|" 
+                           class="font-bold text-white hover:underline truncate block" 
+                           th:text="${tweet.authorDisplayName}">User</a>
+                        <span class="text-gray-500 text-sm truncate block" th:text="|@${tweet.authorUsername}|">@user</span>
+                    </div>
+                </div>
+
+                <p th:if="${!#strings.isEmpty(tweet.content)}" 
+                   class="mt-4 text-gray-200 text-base leading-relaxed break-words" 
+                   th:utext="${tweetTextProcessor != null ? tweetTextProcessor.formatContentWithLinks(tweet.content) : tweet.content}"></p>
+
+                <div class="mt-4 text-xs text-gray-500 border-b border-gray-800 pb-3" 
+                     th:text="${#temporals.format(tweet.createdAt, 'h:mm a · MMM d, yyyy')}">Date</div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-around">
+                <div th:replace="~{fragments/tweet-components :: like-button(tweet=${tweet}, currentUserId=${currentUserId})}"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

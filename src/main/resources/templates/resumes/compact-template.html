@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style type="text/css">
+        @page { size: A4 portrait; margin: 14mm; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #1e293b; font-size: 9pt; line-height: 1.3; }
+        .header-bar { background-color: #047857; color: white; padding: 10pt 14pt; border-radius: 4pt; margin-bottom: 8pt; width: 100%; }
+        .name { font-size: 18pt; font-weight: bold; margin: 0; }
+        .contact { font-size: 8pt; opacity: 0.9; margin-top: 2pt; }
+        .passport-photo { width: 65pt; height: 80pt; border: 1.5pt solid white; border-radius: 3pt; }
+        .sec-title { font-size: 10pt; font-weight: bold; color: #047857; border-bottom: 1pt solid #047857; text-transform: uppercase; margin-top: 8pt; margin-bottom: 4pt; }
+        .item-role { font-weight: bold; color: #0f172a; font-size: 9pt; }
+        .item-desc { font-size: 8.5pt; color: #334155; margin-top: 1pt; margin-bottom: 4pt; }
+        .tag { display: inline-block; border: 0.5pt solid #cbd5e1; padding: 1pt 4pt; border-radius: 2pt; font-size: 7.5pt; margin: 1pt; }
+    </style>
+</head>
+<body>
+    <table class="header-bar" width="100%">
+        <tr>
+            <td valign="top">
+                <div class="name" th:text="${resume.fullName}">Alex Rivera</div>
+                <div class="contact">
+                    <span th:text="${resume.email}">alex@example.com</span> | <span th:text="${resume.phone}">+1 555-0199</span> | <span th:text="${resume.location}">San Francisco, CA</span>
+                </div>
+            </td>
+            <!-- Top Right Passport Photo -->
+            <td th:if="${resume.photoBase64 != null}" align="right" valign="top" style="width: 70pt;">
+                <img th:src="${resume.photoBase64}" class="passport-photo" alt="Photo" />
+            </td>
+        </tr>
+    </table>
+
+    <div th:if="${resume.summary != null}">
+        <div class="sec-title">Summary</div>
+        <p class="item-desc" th:text="${resume.summary}"></p>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.experiences)}">
+        <div class="sec-title">Experience</div>
+        <div th:each="exp : ${resume.experiences}">
+            <table width="100%">
+                <tr><td class="item-role" th:text="${exp.role + ' · ' + exp.company}">Role</td><td align="right" style="font-size: 8pt; color: #64748b;" th:text="${exp.duration}">Dates</td></tr>
+            </table>
+            <p class="item-desc" th:text="${exp.description}"></p>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.skills)}">
+        <div class="sec-title">Skills</div>
+        <div><span th:each="s : ${resume.skills}" class="tag" th:text="${s}">Java</span></div>
+    </div>
+</body>
+</html>

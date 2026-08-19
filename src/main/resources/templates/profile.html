@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${profile.user.displayName + ' (@' + profile.user.username + ') / Nexus'}">Profile</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" th:href="@{/css/animations.css}" />
+    <script th:src="@{/js/app.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#08080c] text-zinc-100 min-h-screen antialiased">
+    <div class="max-w-[1320px] mx-auto flex justify-center min-h-screen">
+        
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='profile')}"></div>
+
+        <main class="w-full max-w-[640px] flex-1 border-r border-zinc-800/80 min-h-screen pb-16 bg-zinc-950/30">
+            <!-- Header -->
+            <div class="sticky top-0 bg-[#08080c]/85 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center space-x-6 z-20">
+                <a th:href="@{/home}" class="hover:bg-zinc-800/60 p-2 rounded-full transition">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                </a>
+                <div class="min-w-0">
+                    <h1 class="text-lg font-bold text-white leading-tight truncate" th:text="${profile.user.displayName}">Name</h1>
+                    <span class="text-[11px] text-zinc-500 block" th:text="${profile.tweetCount + ' Posts'}">0 Posts</span>
+                </div>
+            </div>
+
+            <!-- Banner & Avatar -->
+            <div class="relative">
+                <div class="h-44 w-full overflow-hidden bg-gradient-to-r from-zinc-900 via-indigo-950 to-purple-950">
+                    <img th:if="${profile.user.bannerUrl != null}" 
+                         th:src="${profile.user.bannerUrl}" 
+                         class="w-full h-full object-cover" />
+                </div>
+                <div class="px-4 flex justify-between items-end -mt-14 mb-4">
+                    <div class="w-28 h-28 rounded-full border-4 border-[#08080c] bg-indigo-600 overflow-hidden flex items-center justify-center text-3xl font-bold text-white shrink-0 shadow-2xl">
+                        <img th:if="${profile.user.avatarUrl != null}" 
+                             th:src="${profile.user.avatarUrl}" 
+                             class="w-full h-full object-cover" />
+                        <span th:unless="${profile.user.avatarUrl != null}" 
+                              th:text="${profile.user.username.substring(0, 1).toUpperCase()}">U</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button th:if="${profile.isSelf}" 
+                                th:hx-get="|/u/${profile.user.username}/edit|"
+                                hx-target="#modal-container"
+                                hx-swap="innerHTML"
+                                class="border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/60 text-white font-semibold px-4 py-1.5 rounded-full text-xs transition shadow-sm">
+                            Edit profile
+                        </button>
+
+                        <div th:if="${!profile.isSelf}" class="flex items-center space-x-2">
+                            <a th:href="@{/messages(user=${profile.user.username})}"
+                               class="border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/60 p-2 rounded-full text-white transition flex items-center justify-center" 
+                               title="Send Message">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                            </a>
+                            <div th:replace="~{fragments/follow-components :: follow-section(${profile})}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bio -->
+            <div class="px-5 border-b border-zinc-800/80 pb-4">
+                <h2 class="text-xl font-extrabold text-white leading-none" th:text="${profile.user.displayName}">Name</h2>
+                <span class="text-xs text-zinc-500 block mt-1" th:text="|@${profile.user.username}|">@handle</span>
+                
+                <p class="mt-3 text-zinc-200 text-xs leading-relaxed" 
+                   th:text="${profile.user.bio != null && !profile.user.bio.isEmpty() ? profile.user.bio : 'No bio provided yet.'}"></p>
+                
+                <div class="flex space-x-6 mt-3.5 text-xs text-zinc-400">
+                    <div><span class="font-bold text-white" th:text="${profile.followingCount}">0</span> Following</div>
+                    <div><span id="follower-count-value" class="font-bold text-white" th:text="${profile.followerCount}">0</span> Followers</div>
+                </div>
+            </div>
+
+            <!-- Feed -->
+            <div class="divide-y divide-zinc-800/80">
+                <div th:if="${#lists.isEmpty(profile.tweets)}" class="p-12 text-center text-zinc-500 text-xs">
+                    No posts yet by <span class="font-semibold text-zinc-400" th:text="|@${profile.user.username}|"></span>.
+                </div>
+                <div th:each="tweet : ${profile.tweets}">
+                    <div th:replace="~{fragments/tweet-components :: tweet-card(tweet=${tweet}, currentUserId=${currentUserId})}"></div>
+                </div>
+            </div>
+        </main>
+
+        <div th:replace="~{fragments/sidebar :: right-sidebar}"></div>
+    </div>
+
+    <div id="modal-container"></div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style type="text/css">
+        @page { size: A4 portrait; margin: 18mm 16mm; }
+        body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 10pt; line-height: 1.4; margin: 0; padding: 0; }
+        .header { border-bottom: 2pt solid #6366f1; padding-bottom: 8pt; margin-bottom: 12pt; width: 100%; }
+        .name { font-size: 22pt; font-weight: bold; color: #0f172a; margin: 0; }
+        .contact { font-size: 8.5pt; color: #64748b; margin-top: 4pt; }
+        .passport-photo { width: 75pt; height: 95pt; border: 1pt solid #cbd5e1; padding: 1pt; }
+        .section-title { font-size: 11pt; font-weight: bold; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5pt; border-bottom: 0.5pt solid #cbd5e1; padding-bottom: 2pt; margin-top: 10pt; margin-bottom: 6pt; }
+        .item-title { font-weight: bold; color: #0f172a; font-size: 10pt; }
+        .item-sub { color: #475569; font-size: 9pt; font-style: italic; }
+        .item-date { text-align: right; color: #64748b; font-size: 8.5pt; }
+        .item-desc { font-size: 9pt; color: #334155; margin-top: 2pt; margin-bottom: 6pt; text-align: justify; }
+        .skill-pill { display: inline-block; background-color: #f1f5f9; color: #334155; padding: 2pt 5pt; font-size: 8pt; margin-right: 3pt; margin-bottom: 3pt; border-radius: 3pt; }
+    </style>
+</head>
+<body>
+    <table class="header" width="100%">
+        <tr>
+            <td valign="top">
+                <div class="name" th:text="${resume.fullName}">Alex Rivera</div>
+                <div class="contact">
+                    <span th:text="${resume.email}">alex@example.com</span> | 
+                    <span th:text="${resume.phone}">+1 555-0199</span> | 
+                    <span th:text="${resume.location}">San Francisco, CA</span><br/>
+                    <span th:if="${resume.linkedIn != null}" th:text="${resume.linkedIn}">linkedin.com/in/alex</span>
+                </div>
+                <p class="item-desc" style="margin-top: 6pt;" th:if="${resume.summary != null}" th:text="${resume.summary}"></p>
+            </td>
+            <!-- Top Right Passport Photo -->
+            <td th:if="${resume.photoBase64 != null}" align="right" valign="top" style="width: 85pt;">
+                <img th:src="${resume.photoBase64}" class="passport-photo" alt="Photo" />
+            </td>
+        </tr>
+    </table>
+
+    <div th:if="${!#lists.isEmpty(resume.experiences)}">
+        <div class="section-title">Experience</div>
+        <div th:each="exp : ${resume.experiences}">
+            <table width="100%">
+                <tr><td class="item-title" th:text="${exp.role}">Role</td><td class="item-date" th:text="${exp.duration}">Dates</td></tr>
+                <tr><td class="item-sub" th:text="${exp.company + (exp.location != '' ? ' · ' + exp.location : '')}">Company</td><td></td></tr>
+            </table>
+            <p class="item-desc" th:text="${exp.description}"></p>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.education)}">
+        <div class="section-title">Education</div>
+        <div th:each="edu : ${resume.education}">
+            <table width="100%">
+                <tr><td class="item-title" th:text="${edu.institution}">University</td><td class="item-date" th:text="${edu.year}">Year</td></tr>
+                <tr><td class="item-sub" th:text="${edu.degree + (edu.grade != '' ? ' · ' + edu.grade : '')}">Degree</td><td></td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.skills)}">
+        <div class="section-title">Skills</div>
+        <div style="margin-top: 4pt;"><span th:each="s : ${resume.skills}" class="skill-pill" th:text="${s}">Java</span></div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.projects)}">
+        <div class="section-title">Projects</div>
+        <div th:each="p : ${resume.projects}">
+            <table width="100%"><tr><td class="item-title" th:text="${p.title}">Project</td><td class="item-date" th:text="${p.techStack}">Tech</td></tr></table>
+            <p class="item-desc" th:text="${p.description}"></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 1. Unified New Chat Modal -->
+<div th:fragment="new-chat-modal" 
+     id="new-chat-backdrop"
+     class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+     onclick="if(event.target === this) document.getElementById('modal-container').innerHTML = ''">
+
+    <div class="relative max-w-lg w-full bg-gray-950 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        
+        <!-- Header & Tab Controls -->
+        <div class="p-4 border-b border-gray-800">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-3">
+                    <button type="button" 
+                            onclick="document.getElementById('modal-container').innerHTML = ''"
+                            class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                    <h2 class="text-lg font-bold text-white">New Message</h2>
+                </div>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex bg-gray-900 p-1 rounded-xl">
+                <button type="button" 
+                        id="tab-direct-btn" 
+                        onclick="window.switchChatTab('direct')"
+                        class="flex-1 py-1.5 text-xs font-bold rounded-lg transition bg-white text-black shadow-sm">
+                    Direct Message
+                </button>
+                <button type="button" 
+                        id="tab-group-btn" 
+                        onclick="window.switchChatTab('group')"
+                        class="flex-1 py-1.5 text-xs font-bold rounded-lg transition text-gray-400 hover:text-white">
+                    Create Group
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 1: 1-on-1 Direct Message -->
+        <div id="tab-direct-content" class="flex-1 flex flex-col overflow-hidden">
+            <div class="p-3 border-b border-gray-800">
+                <input type="text" 
+                       id="dm-search-input"
+                       oninput="window.filterUserList('dm-search-input', 'dm-user-list')"
+                       placeholder="Search people..." 
+                       class="w-full bg-gray-900 border border-gray-700 rounded-full px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition" />
+            </div>
+
+            <div class="flex-1 overflow-y-auto divide-y divide-gray-800/60 p-2" id="dm-user-list">
+                <div th:if="${#lists.isEmpty(availableUsers)}" class="text-xs text-gray-500 py-6 text-center">
+                    No users available.
+                </div>
+                <form th:each="user : ${availableUsers}" 
+                      th:action="@{/messages/direct/start}" 
+                      method="post"
+                      class="user-row flex items-center justify-between p-2.5 hover:bg-gray-900 rounded-xl transition cursor-pointer"
+                      onclick="this.submit()">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="recipientUsername" th:value="${user.username}" />
+                    
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-10 h-10 rounded-full bg-sky-600 border border-gray-800 flex items-center justify-center font-bold text-white text-sm shrink-0 overflow-hidden">
+                            <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
+                            <span th:unless="${user.avatarUrl != null}" th:text="${user.username.substring(0, 1).toUpperCase()}">U</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-white truncate user-name" th:text="${user.displayName}">Name</p>
+                            <p class="text-xs text-gray-500 truncate user-handle" th:text="|@${user.username}|">@handle</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-semibold text-sky-400">Chat &rarr;</span>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab 2: Create Group -->
+        <div id="tab-group-content" class="hidden flex-1 flex flex-col overflow-hidden">
+            <form th:action="@{/messages/group/create}" 
+                  method="post" 
+                  class="flex-1 flex flex-col overflow-hidden"
+                  onsubmit="if(this.querySelectorAll('input[name=\'memberUsernames\']:checked').length === 0){ alert('Please select at least one member to create a group.'); return false; }">
+                
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="p-4 space-y-3 border-b border-gray-800">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1">Group Name</label>
+                        <input type="text" 
+                               name="name" 
+                               required 
+                               maxlength="50"
+                               placeholder="e.g. Core Engineering"
+                               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition" />
+                    </div>
+                    <input type="text" 
+                           id="group-search-input"
+                           oninput="window.filterUserList('group-search-input', 'group-user-list')"
+                           placeholder="Filter members..." 
+                           class="w-full bg-gray-900 border border-gray-700 rounded-full px-4 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition" />
+                </div>
+
+                <div class="flex-1 overflow-y-auto divide-y divide-gray-800/60 p-2" id="group-user-list">
+                    <div th:if="${#lists.isEmpty(availableUsers)}" class="text-xs text-gray-500 py-6 text-center">
+                        No other users found to add.
+                    </div>
+                    <label th:each="user : ${availableUsers}" 
+                           class="user-row flex items-center justify-between p-2.5 hover:bg-gray-900/60 rounded-xl cursor-pointer transition">
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <div class="w-9 h-9 rounded-full bg-indigo-600 border border-gray-800 flex items-center justify-center font-bold text-white text-xs shrink-0 overflow-hidden">
+                                <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
+                                <span th:unless="${user.avatarUrl != null}" th:text="${user.username.substring(0, 1).toUpperCase()}">U</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-white truncate user-name" th:text="${user.displayName}">Name</p>
+                                <p class="text-xs text-gray-500 truncate user-handle" th:text="|@${user.username}|">@handle</p>
+                            </div>
+                        </div>
+                        <input type="checkbox" 
+                               name="memberUsernames" 
+                               th:value="${user.username}" 
+                               class="w-4 h-4 rounded text-sky-500 bg-gray-900 border-gray-700 focus:ring-0 focus:ring-offset-0 cursor-pointer" />
+                    </label>
+                </div>
+
+                <div class="p-3 border-t border-gray-800 bg-gray-950 flex justify-end">
+                    <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-white font-bold px-5 py-2 rounded-full text-sm transition shadow-md shadow-sky-500/20 active:scale-95">
+                        Create Group
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Add Members to Existing Group Modal -->
+<div th:fragment="add-members-modal" 
+     id="add-members-backdrop"
+     class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+     onclick="if(event.target === this) document.getElementById('modal-container').innerHTML = ''">
+
+    <div class="relative max-w-md w-full bg-gray-950 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <form th:action="|/messages/group/${convoId}/add|" 
+              method="post" 
+              class="flex-1 flex flex-col overflow-hidden"
+              onsubmit="if(this.querySelectorAll('input[name=\'memberUsernames\']:checked').length === 0){ alert('Please select at least one member to add.'); return false; }">
+            
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+                <h2 class="text-lg font-bold text-white">Add People</h2>
+                <button type="button" 
+                        onclick="document.getElementById('modal-container').innerHTML = ''"
+                        class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-3 border-b border-gray-800">
+                <input type="text" 
+                       id="add-member-search-input"
+                       oninput="window.filterUserList('add-member-search-input', 'add-member-list')"
+                       placeholder="Search people to add..." 
+                       class="w-full bg-gray-900 border border-gray-700 rounded-full px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition" />
+            </div>
+
+            <div class="flex-1 overflow-y-auto divide-y divide-gray-800/60 p-2" id="add-member-list">
+                <div th:if="${#lists.isEmpty(availableUsers)}" class="text-xs text-gray-500 py-6 text-center">
+                    All registered users are already in this group.
+                </div>
+                <label th:each="user : ${availableUsers}" 
+                       class="user-row flex items-center justify-between p-2.5 hover:bg-gray-900/60 rounded-xl cursor-pointer transition">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-sky-600 border border-gray-800 flex items-center justify-center font-bold text-white text-xs shrink-0 overflow-hidden">
+                            <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
+                            <span th:unless="${user.avatarUrl != null}" th:text="${user.username.substring(0, 1).toUpperCase()}">U</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-white truncate user-name" th:text="${user.displayName}">Name</p>
+                            <p class="text-xs text-gray-500 truncate user-handle" th:text="|@${user.username}|">@handle</p>
+                        </div>
+                    </div>
+                    <input type="checkbox" 
+                           name="memberUsernames" 
+                           th:value="${user.username}" 
+                           class="w-4 h-4 rounded text-sky-500 bg-gray-900 border-gray-700 focus:ring-0 focus:ring-offset-0 cursor-pointer" />
+                </label>
+            </div>
+
+            <div class="p-3 border-t border-gray-800 bg-gray-950 flex justify-end">
+                <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-white font-bold px-5 py-1.5 rounded-full text-sm transition shadow-md shadow-sky-500/20 active:scale-95">
+                    Add Members
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. View Group Members Modal -->
+<div th:fragment="view-members-modal" 
+     id="view-members-backdrop"
+     class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+     onclick="if(event.target === this) document.getElementById('modal-container').innerHTML = ''">
+
+    <div class="relative max-w-md w-full bg-gray-950 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        
+        <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-white">Group Members</h2>
+            <button type="button" 
+                    onclick="document.getElementById('modal-container').innerHTML = ''"
+                    class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="p-3 border-b border-gray-800">
+            <input type="text" 
+                   id="view-member-search-input"
+                   oninput="window.filterUserList('view-member-search-input', 'view-member-list')"
+                   placeholder="Search members..." 
+                   class="w-full bg-gray-900 border border-gray-700 rounded-full px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition" />
+        </div>
+
+        <div class="flex-1 overflow-y-auto divide-y divide-gray-800/60 p-2" id="view-member-list">
+            <a th:each="user : ${members}" 
+               th:href="|/u/${user.username}|"
+               class="user-row flex items-center justify-between p-2.5 hover:bg-gray-900/60 rounded-xl transition">
+                <div class="flex items-center space-x-3 min-w-0">
+                    <div class="w-9 h-9 rounded-full bg-sky-600 border border-gray-800 flex items-center justify-center font-bold text-white text-xs shrink-0 overflow-hidden">
+                        <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
+                        <span th:unless="${user.avatarUrl != null}" th:text="${user.username.substring(0, 1).toUpperCase()}">U</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-white truncate user-name" th:text="${user.displayName}">Name</p>
+                        <p class="text-xs text-gray-500 truncate user-handle" th:text="|@${user.username}|">@handle</p>
+                    </div>
+                </div>
+                <span class="text-xs font-semibold text-gray-500 bg-gray-900 px-2 py-1 rounded-md border border-gray-800 hover:text-white transition">View Profile</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style type="text/css">
+        @page { size: A4 portrait; margin: 20mm 18mm; }
+        body { font-family: 'Times New Roman', Times, serif; color: #111; font-size: 10.5pt; line-height: 1.35; }
+        .header { border-bottom: 1.5pt solid #111; padding-bottom: 8pt; margin-bottom: 12pt; width: 100%; }
+        .name { font-size: 20pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1pt; margin: 0; }
+        .contact { font-size: 9pt; margin-top: 4pt; }
+        .passport-photo { width: 70pt; height: 90pt; border: 1pt solid #111; padding: 1pt; }
+        .section-title { font-size: 11pt; font-weight: bold; text-transform: uppercase; border-bottom: 0.75pt solid #111; margin-top: 12pt; margin-bottom: 6pt; padding-bottom: 1pt; }
+        .item-title { font-weight: bold; }
+        .item-date { text-align: right; font-style: italic; }
+        .item-desc { font-size: 9.5pt; margin-top: 2pt; margin-bottom: 6pt; text-align: justify; }
+    </style>
+</head>
+<body>
+    <table class="header" width="100%">
+        <tr>
+            <td valign="top">
+                <div class="name" th:text="${resume.fullName}">Alex Rivera</div>
+                <div class="contact">
+                    <span th:text="${resume.email}">alex@example.com</span> • <span th:text="${resume.phone}">+1 555-0199</span> • <span th:text="${resume.location}">San Francisco, CA</span>
+                </div>
+                <p class="item-desc" style="margin-top: 6pt;" th:if="${resume.summary != null}" th:text="${resume.summary}"></p>
+            </td>
+            <!-- Top Right Passport Photo -->
+            <td th:if="${resume.photoBase64 != null}" align="right" valign="top" style="width: 80pt;">
+                <img th:src="${resume.photoBase64}" class="passport-photo" alt="Photo" />
+            </td>
+        </tr>
+    </table>
+
+    <div th:if="${!#lists.isEmpty(resume.experiences)}">
+        <div class="section-title">Professional Experience</div>
+        <div th:each="exp : ${resume.experiences}">
+            <table width="100%">
+                <tr><td class="item-title" th:text="${exp.role + ', ' + exp.company}">Role</td><td class="item-date" th:text="${exp.duration}">Dates</td></tr>
+            </table>
+            <p class="item-desc" th:text="${exp.description}"></p>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.education)}">
+        <div class="section-title">Education</div>
+        <div th:each="edu : ${resume.education}">
+            <table width="100%">
+                <tr><td class="item-title" th:text="${edu.institution + ' — ' + edu.degree}">University</td><td class="item-date" th:text="${edu.year}">Year</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(resume.skills)}">
+        <div class="section-title">Key Competencies</div>
+        <p class="item-desc" th:text="${#strings.listJoin(resume.skills, ' • ')}">Skills</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace / Nexus</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" th:href="@{/css/animations.css}" />
+    <script th:src="@{/js/app.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#08080c] text-zinc-100 min-h-screen antialiased">
+    <div class="max-w-[1320px] mx-auto flex justify-center min-h-screen">
+        
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='marketplace')}"></div>
+
+        <main class="w-full max-w-[640px] flex-1 border-r border-zinc-800/80 min-h-screen pb-16 bg-zinc-950/30">
+            
+            <!-- Sticky Header -->
+            <div class="sticky top-0 bg-[#08080c]/85 backdrop-blur-md border-b border-zinc-800/80 px-5 py-3.5 flex justify-between items-center z-20">
+                <div>
+                    <h1 class="text-lg font-bold text-white leading-none">Marketplace</h1>
+                    <span class="text-[11px] text-zinc-500">Verified Sponsor Offers</span>
+                </div>
+                
+                <button type="button" 
+                        hx-get="/ads/create"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                        class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white font-semibold px-4 py-1.5 rounded-full text-xs transition shadow-md shadow-indigo-500/20 active:scale-95">
+                    + Post an Ad
+                </button>
+            </div>
+
+            <!-- Ads Stream -->
+            <div class="divide-y divide-zinc-800/80">
+                <div th:if="${#lists.isEmpty(ads)}" class="p-16 text-center text-zinc-500 text-xs">
+                    No active marketplace promotions right now.
+                </div>
+
+                <div th:each="ad : ${ads}" class="p-5 hover:bg-zinc-900/40 transition flex flex-col space-y-3">
+                    
+                    <!-- Advertiser Identity -->
+                    <div class="flex items-center justify-between">
+                        <a th:href="|/u/${ad.advertiserUsername}|" class="flex items-center space-x-2.5 group">
+                            <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs text-white shadow-inner"
+                                 th:text="${ad.advertiserUsername.substring(0,1).toUpperCase()}">A</div>
+                            <div>
+                                <span class="font-bold text-xs text-zinc-100 group-hover:text-sky-400 transition" th:text="${ad.advertiserDisplayName}">Name</span>
+                                <span class="text-[11px] text-zinc-500 block leading-none" th:text="|@${ad.advertiserUsername}|">@handle</span>
+                            </div>
+                        </a>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">Sponsored</span>
+                    </div>
+
+                    <!-- Title & Copy -->
+                    <div>
+                        <h2 class="text-sm font-bold text-white mb-1" th:text="${ad.title}">Ad Title</h2>
+                        <p class="text-xs text-zinc-300 leading-relaxed" th:text="${ad.description}">Description copy</p>
+                    </div>
+
+                    <!-- Media Asset -->
+                    <div th:if="${ad.mediaUrl != null}" class="rounded-2xl overflow-hidden border border-zinc-800 relative bg-zinc-900 max-h-80">
+                        <img th:src="${ad.mediaUrl}" alt="Promotion" class="w-full h-full object-cover" />
+                    </div>
+
+                    <!-- Dual Interaction: Visit Site vs Inquire Via Chat -->
+                    <div class="flex items-center justify-between pt-2">
+                        <a th:href="${ad.targetUrl}" target="_blank" rel="noopener noreferrer" 
+                           class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline flex items-center space-x-1">
+                            <span>Learn More</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+
+                        <!-- Direct 1-on-1 User-to-Advertiser DM Trigger -->
+                        <form th:action="|/ads/${ad.id}/inquire|" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            <button type="submit" class="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-3.5 py-1.5 rounded-full text-xs transition flex items-center space-x-1.5 shadow-sm">
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                <span>Message Advertiser</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div th:replace="~{fragments/sidebar :: right-sidebar}"></div>
+    </div>
+
+    <div id="modal-container"></div>
+</body>
+</html>

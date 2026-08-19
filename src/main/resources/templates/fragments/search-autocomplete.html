@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="dropdown" 
+     th:if="${!#strings.isEmpty(results.query)}"
+     class="bg-gray-950 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden divide-y divide-gray-800/60">
+
+    <div th:if="${!#lists.isEmpty(results.users)}" class="py-2">
+        <div class="px-4 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">People</div>
+        <a th:each="user : ${results.users}" 
+           th:href="@{'/u/' + ${user.username}}"
+           class="flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-900 transition">
+            <div class="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center font-bold text-sm text-white shrink-0"
+                 th:text="${user.username.substring(0, 1).toUpperCase()}">U</div>
+            <div class="min-w-0 flex-1">
+                <p class="font-bold text-sm text-white truncate leading-none" th:text="${user.displayName}">Name</p>
+                <span class="text-xs text-gray-500 truncate" th:text="'@' + ${user.username}">@username</span>
+            </div>
+        </a>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(results.hashtags)}" class="py-2">
+        <div class="px-4 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Hashtags</div>
+        <a th:each="tag : ${results.hashtags}" 
+           th:href="@{'/hashtag/' + ${tag.tag}}"
+           class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-900 transition">
+            <div class="flex items-center space-x-3">
+                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-sky-400 font-bold text-xs">#</div>
+                <span class="font-bold text-sm text-white" th:text="'#' + ${tag.tag}">#hashtag</span>
+            </div>
+            <span class="text-xs text-gray-500" th:text="${tag.count + ' posts'}">0 posts</span>
+        </a>
+    </div>
+
+    <div class="p-2 bg-gray-900/40">
+        <a th:href="@{/search(q=${results.query})}" 
+           class="flex items-center space-x-2 px-3 py-2 text-sm text-sky-400 hover:bg-gray-900 rounded-xl transition">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <span class="truncate">Search for "<span class="font-semibold text-white" th:text="${results.query}"></span>"</span>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

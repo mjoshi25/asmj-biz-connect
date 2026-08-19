@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Self-replacing Follow/Following Button Section -->
+<div th:fragment="follow-section(profile)" id="follow-btn-container">
+    <button th:if="${!profile.isSelf}"
+            th:hx-post="|/u/${profile.user.username}/follow|"
+            hx-target="#follow-btn-container"
+            hx-swap="outerHTML"
+            th:class="${profile.isFollowing} ? 
+                'border border-gray-600 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10 text-white font-bold px-5 py-1.5 rounded-full text-sm transition duration-200' : 
+                'bg-white hover:bg-gray-200 text-black font-bold px-5 py-1.5 rounded-full text-sm transition duration-200 shadow-md'"
+            th:text="${profile.isFollowing} ? 'Following' : 'Follow'">
+        Follow
+    </button>
+
+    <!-- Out-of-band swap to increment/decrement follower counter live -->
+    <span id="follower-count-value" 
+          hx-swap-oob="true" 
+          class="font-bold text-white" 
+          th:text="${profile.followerCount}">0</span>
+</div>
+
+</body>
+</html>

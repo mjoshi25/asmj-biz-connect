@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Single Message Bubble with Media & Attachment Support -->
+<div th:fragment="message-bubble(msg)" 
+     th:id="|msg-${msg.id}|"
+     class="flex flex-col mb-3 animate-fadeIn"
+     th:classappend="${msg.isSelf} ? 'items-end' : 'items-start'">
+    
+    <!-- Group Member Header -->
+    <span th:if="${!msg.isSelf and msg.isGroup}" 
+          class="text-[11px] font-semibold text-zinc-400 mb-1 px-1 flex items-center space-x-1">
+        <span th:text="${msg.senderDisplayName}">Sender</span>
+        <span class="text-zinc-500 font-normal" th:text="|@${msg.senderUsername}|">@user</span>
+    </span>
+
+    <div class="max-w-[75%] rounded-2xl text-xs break-words leading-relaxed shadow-sm overflow-hidden"
+         th:classappend="${msg.isSelf} ? 'bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 text-white rounded-br-none' : 'bg-zinc-900 text-zinc-100 rounded-bl-none border border-zinc-800'">
+        
+        <!-- Attached Image Render -->
+        <div th:if="${msg.mediaType == 'IMAGE'}" class="overflow-hidden cursor-pointer">
+            <a th:href="${msg.mediaUrl}" target="_blank">
+                <img th:src="${msg.mediaUrl}" alt="Attachment" class="max-h-60 w-auto rounded-t-xl object-cover hover:opacity-95 transition" />
+            </a>
+        </div>
+
+        <!-- Attached File Render (PDF, Doc, Zip, etc.) -->
+        <div th:if="${msg.mediaType == 'FILE'}" class="p-3">
+            <a th:href="${msg.mediaUrl}" target="_blank" download
+               class="flex items-center space-x-2.5 p-2 rounded-xl transition"
+               th:classappend="${msg.isSelf} ? 'bg-black/20 hover:bg-black/30 text-white' : 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200'">
+                <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-xs truncate" th:text="${msg.originalFileName}">Document.pdf</p>
+                    <span class="text-[10px] opacity-75">Click to download</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Text Message -->
+        <p th:if="${!#strings.isEmpty(msg.content)}" class="px-3.5 py-2.5" th:text="${msg.content}">Message</p>
+    </div>
+         
+    <span class="text-[10px] text-zinc-500 mt-1 px-1" th:text="${msg.createdAtFormatted}">12:30 PM</span>
+</div>
+
+<!-- Active Chat Drawer -->
+<div th:fragment="chat-thread" 
+     id="chat-window-pane" 
+     class="h-full flex flex-col justify-between bg-zinc-950/40">
+    
+    <!-- Chat Header with Group Controls & View Members Trigger -->
+    <div class="p-3.5 border-b border-zinc-800/80 flex items-center justify-between bg-[#08080c]/85 backdrop-blur-md sticky top-0 z-10">
+        <div class="flex items-center space-x-3 min-w-0">
+            <div class="w-10 h-10 rounded-full border border-zinc-700/60 flex items-center justify-center font-bold text-white shrink-0 overflow-hidden text-xs"
+                 th:classappend="${activeConversation.isGroup} ? 'bg-purple-600' : 'bg-indigo-600'">
+                <span th:if="${activeConversation.isGroup}">👥</span>
+                <span th:unless="${activeConversation.isGroup}" 
+                      th:text="${activeConversation.name != null && !activeConversation.name.isEmpty() ? activeConversation.name.substring(0, 1).toUpperCase() : 'U'}">U</span>
+            </div>
+            <div class="min-w-0">
+                <p class="font-bold text-white text-xs truncate" 
+                   th:text="${activeConversation.isGroup ? activeConversation.name : (chatTitle != null ? chatTitle : 'Direct Message')}">Conversation</p>
+                
+                <button th:if="${activeConversation.isGroup}"
+                        type="button"
+                        th:hx-get="|/messages/modal/${activeConversation.id}/members|"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                        class="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline truncate text-left transition block" 
+                        th:text="${activeConversation.participantIds.size() + ' members'}">
+                    Members
+                </button>
+                <p th:unless="${activeConversation.isGroup}" class="text-[11px] text-zinc-500 truncate">Direct Message</p>
+            </div>
+        </div>
+
+        <div th:if="${activeConversation.isGroup}" class="flex items-center space-x-2">
+            <button type="button" 
+                    th:hx-get="|/messages/modal/${activeConversation.id}/add-members|"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center space-x-1"
+                    title="Add people">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Add</span>
+            </button>
+
+            <form th:action="|/messages/group/${activeConversation.id}/leave|" 
+                  method="post" 
+                  onsubmit="return confirm('Are you sure you want to leave this group?');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" 
+                        class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-1.5 rounded-full transition"
+                        title="Leave Group">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="messages-container" 
+         class="flex-1 p-4 overflow-y-auto space-y-2 min-h-[350px] max-h-[calc(100vh-210px)] flex flex-col justify-end">
+        <div class="space-y-2" id="chat-bubbles-wrapper">
+            <div th:if="${#lists.isEmpty(messages)}" class="text-center text-zinc-500 text-xs py-8">
+                No messages in this conversation yet. Send a message or photo!
+            </div>
+            <div th:each="msg : ${messages}">
+                <div th:replace="~{fragments/message-components :: message-bubble(msg=${msg})}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Composer with Media Attachment Support -->
+    <div class="p-3 border-t border-zinc-800/80 bg-[#08080c]/90">
+        <!-- Attachment Preview Bar -->
+        <div id="msg-file-preview-wrapper" class="hidden mb-2 p-2 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between">
+            <div class="flex items-center space-x-2 min-w-0">
+                <svg id="msg-file-icon" class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+                <img id="msg-image-preview" src="#" alt="Preview" class="hidden h-10 w-10 rounded object-cover" />
+                <span id="msg-file-name" class="text-xs text-zinc-200 truncate">attachment.png</span>
+            </div>
+            <button type="button" onclick="window.clearMsgAttachment()" class="text-zinc-500 hover:text-white p-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form hx-post="/messages/send"
+              hx-encoding="multipart/form-data"
+              hx-target="#chat-bubbles-wrapper"
+              hx-swap="beforeend"
+              hx-on::after-request="if(event.detail.successful) { this.reset(); window.clearMsgAttachment(); window.scrollMessagesToBottom(); }"
+              class="flex items-center space-x-2">
+            
+            <input type="hidden" name="conversationId" th:value="${activeConversation.id}" id="active-chat-convo-id" />
+            
+            <!-- Media Attachment Button -->
+            <label class="cursor-pointer text-zinc-400 hover:text-indigo-400 hover:bg-zinc-800/60 p-2 rounded-full transition shrink-0" title="Attach file or image">
+                <input type="file" name="file" id="msg-file-input" class="hidden" onchange="window.previewMsgAttachment(this)" />
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+            </label>
+
+            <!-- Text Input -->
+            <input type="text" 
+                   name="content" 
+                   autocomplete="off"
+                   placeholder="Start a new message..." 
+                   class="flex-1 bg-zinc-900/80 border border-zinc-800 rounded-full px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition" />
+                   
+            <!-- Send Button -->
+            <button type="submit" 
+                    class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white p-2.5 rounded-full transition disabled:opacity-50 active:scale-95 shrink-0 shadow-md shadow-indigo-500/20">
+                <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

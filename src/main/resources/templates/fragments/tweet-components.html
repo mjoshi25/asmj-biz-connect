@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Standalone Tweet Item -->
+<div th:fragment="tweet-card(tweet, currentUserId)" 
+     th:id="'tweet-' + ${tweet.id}"
+     class="tweet-card p-4 hover:bg-gray-950/50 transition border-b border-gray-800">
+    <div class="flex space-x-3">
+        <div class="w-10 h-10 rounded-full bg-sky-600 flex items-center justify-center font-bold text-white shrink-0"
+             th:text="${tweet.authorUsername != null and !tweet.authorUsername.isEmpty() ? tweet.authorUsername.substring(0, 1).toUpperCase() : 'U'}">U</div>
+        
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 truncate">
+                    <a th:href="|/u/${tweet.authorUsername}|" 
+                       class="font-bold hover:underline truncate text-white" 
+                       th:text="${tweet.authorDisplayName}">User</a>
+                    <span class="text-gray-500 text-sm truncate" th:text="|@${tweet.authorUsername}|">@user</span>
+                    <span class="text-gray-500 text-xs shrink-0" th:text="${#temporals.format(tweet.createdAt, 'MMM d, HH:mm')}"></span>
+                </div>
+
+                <!-- Delete button (Author only) -->
+                <button th:if="${tweet.authorId == currentUserId}"
+                        th:hx-delete="|/tweets/${tweet.id}|"
+                        hx-target="closest .tweet-card"
+                        hx-swap="outerHTML swap:400ms"
+                        hx-confirm="Are you sure you want to delete this tweet?"
+                        class="text-gray-500 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10 transition"
+                        title="Delete tweet">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content with parsed clickable links via standard model variable -->
+            <p th:if="${!#strings.isEmpty(tweet.content)}" 
+               class="mt-2 text-gray-200 break-words" 
+               th:utext="${tweetTextProcessor != null ? tweetTextProcessor.formatContentWithLinks(tweet.content) : tweet.content}">Content</p>
+
+            <!-- Media Section -->
+            <div th:id="'tweet-media-' + ${tweet.id}">
+                <!-- Ready State -->
+                <div th:if="${tweet.imageUrl != null and tweet.mediaStatus?.name() != 'PROCESSING'}" 
+                     class="mt-3 overflow-hidden rounded-2xl border border-gray-800 relative bg-gray-900 aspect-video cursor-pointer group"
+                     th:hx-get="|/tweets/${tweet.id}/lightbox|"
+                     hx-target="#modal-container"
+                     hx-swap="innerHTML">
+                    
+                    <div th:if="${tweet.blurDataUrl != null}"
+                         class="absolute inset-0 bg-cover bg-center filter blur-md scale-105"
+                         th:style="'background-image: url(' + ${tweet.blurDataUrl} + ');'"></div>
+
+                    <img th:src="${tweet.imageUrl}"
+                         loading="lazy"
+                         alt="Media"
+                         class="relative w-full h-full object-cover group-hover:opacity-90 transition duration-200" />
+                </div>
+
+                <!-- Processing Skeleton -->
+                <div th:if="${tweet.mediaStatus?.name() == 'PROCESSING'}"
+                     class="mt-3 overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/60 aspect-video flex flex-col items-center justify-center space-y-2 animate-pulse">
+                    <svg class="animate-spin h-6 w-6 text-sky-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span class="text-xs text-gray-400 font-medium">Optimizing media...</span>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="flex space-x-8 mt-3 text-gray-500 text-sm">
+                <!-- Reply Button -->
+                <a th:href="|/tweets/${tweet.id}/thread|" 
+                   class="flex items-center space-x-2 hover:text-sky-500 transition group">
+                    <svg class="w-5 h-5 fill-none stroke-current" stroke-width="1.75" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" 
+                              d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.618 1.076.474 1.684l-.53 2.247 2.502-.834a2.25 2.25 0 011.393.078c.883.395 1.864.605 2.888.605z" />
+                    </svg>
+                    <span class="text-xs font-semibold group-hover:text-sky-500" th:text="${tweet.replyCount}">0</span>
+                </a>
+
+                <!-- Like Button -->
+                <div th:replace="~{fragments/tweet-components :: like-button(tweet=${tweet}, currentUserId=${currentUserId})}"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Self-replacing Like Button Fragment -->
+<button th:fragment="like-button(tweet, currentUserId)"
+        th:hx-post="|/tweets/${tweet.id}/like|"
+        hx-swap="outerHTML"
+        th:class="${tweet.likedBy != null and tweet.likedBy.contains(currentUserId)} ? 
+            'flex items-center space-x-2 text-pink-500 hover:text-pink-600 transition group' : 
+            'flex items-center space-x-2 text-gray-500 hover:text-pink-500 transition group'">
+    
+    <svg class="w-5 h-5 transition-transform active:scale-125"
+         th:classappend="${tweet.likedBy != null and tweet.likedBy.contains(currentUserId)} ? 'fill-current' : 'fill-none stroke-current'"
+         stroke-width="1.75"
+         viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+    </svg>
+
+    <span class="text-xs font-semibold" 
+          th:text="${tweet.likedBy != null ? #sets.size(tweet.likedBy) : 0}"
+          th:classappend="${tweet.likedBy != null and tweet.likedBy.contains(currentUserId)} ? 'text-pink-500' : 'text-gray-500 group-hover:text-pink-500'">0</span>
+</button>
+
+</body>
+</html>

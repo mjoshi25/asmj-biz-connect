@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<th:block th:fragment="tweet-list">
+    <div th:each="tweet, iterStat : ${tweets.content}" 
+         th:attr="
+            hx-get=${iterStat.last and tweets.hasNext()} ? @{/tweets/feed(page=${currentPage + 1})} : null,
+            hx-trigger=${iterStat.last and tweets.hasNext()} ? 'revealed' : null,
+            hx-swap=${iterStat.last and tweets.hasNext()} ? 'afterend' : null,
+            hx-indicator=${iterStat.last and tweets.hasNext()} ? '#feed-spinner' : null">
+        
+        <div th:replace="~{fragments/tweet-components :: tweet-card(tweet=${tweet}, currentUserId=${currentUserId})}"></div>
+    </div>
+</th:block>
+
+</body>
+</html>
