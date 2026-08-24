@@ -17,7 +17,7 @@
         </form>
     </div>
 
-    <!-- What's Happening / Trending Topics Card -->
+    <!-- Trending Topics -->
     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
         <h2 class="text-sm font-black text-white px-1">What's happening</h2>
         
@@ -35,7 +35,7 @@
         </div>
     </div>
 
-    <!-- Who to Follow Card -->
+    <!-- Who to Follow -->
     <div th:if="${suggestedUsers != null and !suggestedUsers.isEmpty()}" class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
         <h2 class="text-sm font-black text-white px-1">Who to follow</h2>
         
@@ -44,7 +44,7 @@
                 <a th:href="|/u/${user.username}|" class="flex items-center space-x-2.5 min-w-0">
                     <div class="w-9 h-9 rounded-full border border-zinc-700/60 bg-blue-600 overflow-hidden flex items-center justify-center font-bold text-white shrink-0 text-xs shadow-inner">
                         <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
-                        <span th:unless="${user.avatarUrl != null}" th:text="${user.username.substring(0, 1).toUpperCase()}">U</span>
+                        <span th:unless="${user.avatarUrl != null}" th:text="${user.displayName != null && !user.displayName.isEmpty() ? user.displayName.substring(0, 1).toUpperCase() : 'U'}">U</span>
                     </div>
                     <div class="flex flex-col min-w-0 text-left">
                         <span class="font-bold text-xs text-white hover:text-sky-400 transition truncate" th:text="${user.displayName}">Name</span>
@@ -52,12 +52,17 @@
                     </div>
                 </a>
 
-                <form th:action="|/u/${user.username}/follow|" method="post">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                    <button type="submit" class="bg-white hover:bg-zinc-200 text-black font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm">
+                <!-- Follow Button with Embedded CSRF Header -->
+                <div th:id="|follow-btn-container-${user.username}|">
+                    <button type="button"
+                            th:hx-post="|/u/${user.username}/follow|"
+                            th:hx-headers="|{'${_csrf.headerName}': '${_csrf.token}'}|"
+                            th:hx-target="|#follow-btn-container-${user.username}|"
+                            hx-swap="outerHTML"
+                            class="bg-white hover:bg-zinc-200 text-black font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm">
                         Follow
                     </button>
-                </form>
+                </div>
             </div>
         </div>
     </div>
