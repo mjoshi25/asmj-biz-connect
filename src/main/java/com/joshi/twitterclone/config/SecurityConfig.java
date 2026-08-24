@@ -79,8 +79,8 @@ public class SecurityConfig {
                     "/ws/**"
                 ).permitAll()
 
-                // Public Authentication Endpoints
-                .requestMatchers("/login", "/register").permitAll()
+                // Public Pages
+                .requestMatchers("/", "/privacy", "/login", "/register").permitAll()
 
                 // Admin Moderation Endpoints
                 .requestMatchers("/ads/admin/**").hasRole("ADMIN")

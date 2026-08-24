@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Creator / Nexus</title>
+    <title>Resume Creator / ASMJ Biz Connect</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
@@ -12,17 +12,17 @@
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
-<body class="bg-[#08080c] text-zinc-100 min-h-screen antialiased">
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased">
     <div class="max-w-[1320px] mx-auto flex justify-center min-h-screen">
         
         <div th:replace="~{fragments/navigation :: left-nav(activeTab='resume')}"></div>
 
         <main class="w-full max-w-[860px] flex-1 border-r border-zinc-800/80 min-h-screen pb-16 bg-zinc-950/30">
             <!-- Header -->
-            <div class="sticky top-0 bg-[#08080c]/85 backdrop-blur-md border-b border-zinc-800/80 px-5 py-3.5 flex justify-between items-center z-20">
+            <div class="sticky top-0 bg-[#080c14]/85 backdrop-blur-md border-b border-zinc-800/80 px-5 py-3.5 flex justify-between items-center z-20">
                 <div>
                     <h1 class="text-lg font-bold text-white leading-none">Resume Creator</h1>
-                    <span class="text-[11px] text-zinc-500">Excel & Photo to PDF Generator</span>
+                    <span class="text-[11px] text-zinc-500">ASMJ Excel & Photo to PDF Generator</span>
                 </div>
                 
                 <a th:href="@{/resume/template/download}" 
@@ -63,13 +63,13 @@
                         <!-- Submit Button -->
                         <div class="md:col-span-2 flex justify-center pt-2">
                             <button type="submit" 
-                                    class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white font-semibold px-8 py-2.5 rounded-xl text-xs transition shadow-md shadow-indigo-500/20 active:scale-95">
+                                    class="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-90 text-white font-semibold px-8 py-2.5 rounded-xl text-xs transition shadow-md shadow-blue-500/20 active:scale-95">
                                 Parse, Attach Photo & Preview
                             </button>
                         </div>
                     </form>
 
-                    <div id="upload-spinner" class="htmx-indicator text-indigo-400 text-xs flex items-center justify-center space-x-2">
+                    <div id="upload-spinner" class="htmx-indicator text-blue-400 text-xs flex items-center justify-center space-x-2">
                         <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
                         <span>Processing documents and rendering preview...</span>
                     </div>

@@ -6,7 +6,7 @@
        class="w-16 sm:w-20 xl:w-64 h-screen sticky top-0 py-4 px-2 xl:px-4 flex flex-col justify-between border-r border-zinc-800/80 shrink-0 z-30 select-none bg-[#08080c]/90 backdrop-blur-md">
     
     <div class="space-y-1.5">
-        <!-- Nexus Brand Logo -->
+        <!-- ASMJ Biz Connect Logo -->
         <a th:href="@{/home}" class="flex items-center justify-center xl:justify-start p-2 rounded-2xl w-fit transition duration-200 mb-2">
             <div th:replace="~{fragments/logo :: app-logo}"></div>
         </a>
@@ -88,7 +88,7 @@
         <!-- Post Button -->
         <div class="pt-3">
             <a th:href="@{/home#compose-box}" 
-               class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:opacity-90 text-white font-bold p-3 xl:py-3.5 rounded-2xl flex items-center justify-center transition shadow-lg shadow-indigo-500/25 active:scale-95">
+               class="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold p-3 xl:py-3.5 rounded-2xl flex items-center justify-center transition shadow-lg shadow-blue-500/25 active:scale-95">
                 <svg class="w-5 h-5 xl:hidden" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 <span class="hidden xl:inline text-sm font-semibold tracking-wide">Post</span>
             </a>
@@ -118,7 +118,7 @@
                 onclick="document.getElementById('user-popup-menu').classList.toggle('hidden')"
                 class="w-full flex items-center justify-between p-2 rounded-2xl hover:bg-zinc-800/40 border border-transparent hover:border-zinc-800 transition group">
             <div class="flex items-center space-x-3 min-w-0">
-                <div class="w-10 h-10 rounded-full border border-zinc-700 bg-indigo-600 overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-inner">
+                <div class="w-10 h-10 rounded-full border border-zinc-700 bg-blue-600 overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-inner">
                     <img th:if="${currentUser.avatarUrl != null}" th:src="${currentUser.avatarUrl}" class="w-full h-full object-cover" />
                     <span th:unless="${currentUser.avatarUrl != null}" th:text="${currentUser.username.substring(0, 1).toUpperCase()}">U</span>
                 </div>

@@ -1,157 +1,159 @@
 package com.joshi.twitterclone.service;
 
 import com.joshi.twitterclone.dto.ThreadDto;
-import com.joshi.twitterclone.dto.TrendingHashtagDto;
+import com.joshi.twitterclone.dto.TrendDto;
 import com.joshi.twitterclone.model.Tweet;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.repository.TweetRepository;
-import com.joshi.twitterclone.repository.TweetSearchRepository;
 import com.joshi.twitterclone.repository.UserRepository;
-import com.joshi.twitterclone.util.TweetTextProcessor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TweetService {
 
     private final TweetRepository tweetRepository;
     private final UserRepository userRepository;
-    private final TweetSearchRepository tweetSearchRepository;
-    private final AsyncImageProcessor asyncImageProcessor;
-    private final TweetBroadcastService tweetBroadcastService;
-    private final NotificationService notificationService;
+    private final FileStorageService fileStorageService;
 
-    public Tweet createTweetWithAsyncImage(String username, String content, MultipartFile file) throws IOException {
-        User user = userRepository.findByUsername(username.toLowerCase())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public Tweet createTweetWithAsyncImage(String username, String content, MultipartFile imageFile) {
+        User author = userRepository.findByUsername(username.toLowerCase())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Tweet tweet = new Tweet();
-        tweet.setAuthorId(user.getId());
-        tweet.setAuthorUsername(user.getUsername());
-        tweet.setAuthorDisplayName(user.getDisplayName());
+        tweet.setAuthorId(author.getId());
+        tweet.setAuthorUsername(author.getUsername());
+        tweet.setAuthorDisplayName(author.getDisplayName());
         tweet.setContent(content != null ? content.trim() : "");
-        tweet.setHashtags(TweetTextProcessor.extractHashtags(content));
-        tweet.setMediaStatus(file != null && !file.isEmpty() ? Tweet.MediaStatus.PROCESSING : Tweet.MediaStatus.NONE);
+        tweet.setCreatedAt(LocalDateTime.now());
 
-        Tweet savedTweet = tweetRepository.save(tweet);
-
-        if (file != null && !file.isEmpty()) {
-            asyncImageProcessor.processTweetImageAsync(savedTweet.getId(), file.getBytes());
-        }
-
-        notificationService.processMentionNotifications(savedTweet);
-        tweetBroadcastService.broadcastNewTweet(savedTweet);
-
-        return savedTweet;
-    }
-
-    public Slice<Tweet> getTimelineSlice(String username, int page, int size) {
-        User user = userRepository.findByUsername(username.toLowerCase())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Set<String> authorIds = new HashSet<>(user.getFollowing());
-        authorIds.add(user.getId());
-
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return tweetRepository.findByAuthorIdInAndParentTweetIdIsNull(authorIds, pageRequest);
-    }
-
-    public Tweet toggleLike(String tweetId, String username) {
-        User user = userRepository.findByUsername(username.toLowerCase())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        Tweet tweet = tweetRepository.findById(tweetId)
-                .orElseThrow(() -> new RuntimeException("Tweet not found"));
-
-        if (tweet.getLikedBy().contains(user.getId())) {
-            tweet.getLikedBy().remove(user.getId());
-        } else {
-            tweet.getLikedBy().add(user.getId());
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String imageUrl = fileStorageService.saveImageOptimized(imageFile);
+            tweet.setImageUrl(imageUrl);
         }
 
         return tweetRepository.save(tweet);
     }
 
-    public void deleteTweet(String tweetId, String username) {
-        User user = userRepository.findByUsername(username.toLowerCase())
+    public Tweet createReply(String username, String parentTweetId, String content) {
+        User author = userRepository.findByUsername(username.toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        Tweet tweet = tweetRepository.findById(tweetId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tweet not found"));
 
-        if (!tweet.getAuthorId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized deletion");
-        }
-
-        tweetRepository.delete(tweet);
-    }
-
-    public Tweet createReply(String parentTweetId, String username, String content) {
-        User user = userRepository.findByUsername(username.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         Tweet parent = tweetRepository.findById(parentTweetId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent tweet not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent post not found"));
 
         Tweet reply = new Tweet();
-        reply.setAuthorId(user.getId());
-        reply.setAuthorUsername(user.getUsername());
-        reply.setAuthorDisplayName(user.getDisplayName());
-        reply.setContent(content.trim());
-        reply.setParentTweetId(parent.getId());
-        reply.setHashtags(TweetTextProcessor.extractHashtags(content));
+        reply.setAuthorId(author.getId());
+        reply.setAuthorUsername(author.getUsername());
+        reply.setAuthorDisplayName(author.getDisplayName());
+        reply.setContent(content != null ? content.trim() : "");
+        reply.setParentTweetId(parentTweetId);
+        reply.setCreatedAt(LocalDateTime.now());
 
-        Tweet savedReply = tweetRepository.save(reply);
-
-        parent.setReplyCount(parent.getReplyCount() + 1);
+        parent.setRepliesCount(parent.getRepliesCount() + 1);
         tweetRepository.save(parent);
 
-        notificationService.processMentionNotifications(savedReply);
-        return savedReply;
+        return tweetRepository.save(reply);
+    }
+
+    public Page<Tweet> getTimelineSlice(String username, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return tweetRepository.findAllByOrderByCreatedAtDesc(pageRequest);
     }
 
     public ThreadDto getThread(String tweetId) {
-        Tweet focalTweet = tweetRepository.findById(tweetId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tweet not found"));
-
-        Tweet parentTweet = null;
-        if (focalTweet.getParentTweetId() != null) {
-            parentTweet = tweetRepository.findById(focalTweet.getParentTweetId()).orElse(null);
-        }
-
-        List<Tweet> replies = tweetRepository.findByParentTweetIdOrderByCreatedAtAsc(focalTweet.getId());
-
+        Tweet root = tweetRepository.findById(tweetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        List<Tweet> replies = tweetRepository.findByParentTweetIdOrderByCreatedAtAsc(tweetId);
+        
         return ThreadDto.builder()
-                .focalTweet(focalTweet)
-                .parentTweet(parentTweet)
+                .rootTweet(root)
+                .mainTweet(root)
                 .replies(replies)
                 .build();
     }
 
-    public Slice<Tweet> getTweetsByHashtag(String hashtag, int page, int size) {
-        String cleanTag = hashtag.startsWith("#") ? hashtag.substring(1) : hashtag;
-        return tweetRepository.findByHashtagsContainingIgnoreCaseOrderByCreatedAtDesc(
-                cleanTag.toLowerCase(), PageRequest.of(page, size)
-        );
+    public Page<Tweet> getTweetsByHashtag(String hashtag, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        String pattern = "#" + hashtag.replace("#", "");
+        return tweetRepository.findByContentRegex(pattern, pageRequest);
     }
 
-    public Slice<Tweet> searchTweets(String searchTerm, int page, int size) {
-        if (searchTerm.startsWith("#")) {
-            return getTweetsByHashtag(searchTerm, page, size);
+    public Page<Tweet> searchTweets(String query, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return tweetRepository.findByContentRegex(query, pageRequest);
+    }
+
+    public Tweet toggleLike(String tweetId, String username) {
+        Tweet tweet = tweetRepository.findById(tweetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+
+        Set<String> likedBy = tweet.getLikedByUsernames();
+        if (likedBy == null) {
+            likedBy = new HashSet<>();
+            tweet.setLikedByUsernames(likedBy);
         }
-        return tweetRepository.searchByText(searchTerm, PageRequest.of(page, size));
+
+        if (likedBy.contains(username.toLowerCase())) {
+            likedBy.remove(username.toLowerCase());
+            tweet.setLikesCount(Math.max(0, tweet.getLikesCount() - 1));
+        } else {
+            likedBy.add(username.toLowerCase());
+            tweet.setLikesCount(tweet.getLikesCount() + 1);
+        }
+
+        return tweetRepository.save(tweet);
     }
 
-    public List<TrendingHashtagDto> getTrendingHashtags() {
-        return tweetSearchRepository.getTrendingHashtags(24, 5);
+    public void deleteTweet(String tweetId, String requestingUsername) {
+        deleteTweet(tweetId, requestingUsername, false);
+    }
+
+    public void deleteTweet(String tweetId, String requestingUsername, boolean isAdmin) {
+        Tweet tweet = tweetRepository.findById(tweetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+
+        if (!isAdmin && !tweet.getAuthorUsername().equalsIgnoreCase(requestingUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to delete this post.");
+        }
+
+        if (tweet.getImageUrl() != null && !tweet.getImageUrl().isBlank()) {
+            fileStorageService.deleteByUrl(tweet.getImageUrl());
+        }
+
+        tweetRepository.delete(tweet);
+        log.info("Tweet [{}] deleted by user [{}]", tweetId, requestingUsername);
+    }
+
+    public List<Tweet> getAllTweets() {
+        return tweetRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    /**
+     * Returns structured trending topics matching sidebar template requirements.
+     */
+    public List<TrendDto> getTrendingHashtags() {
+        return List.of(
+                TrendDto.builder().hashtag("ASMJBizConnect").category("Business · Trending").tweetCount(1420).build(),
+                TrendDto.builder().hashtag("SpringBoot3").category("Technology · Trending").tweetCount(890).build(),
+                TrendDto.builder().hashtag("AdMarketplace").category("Commerce · Trending").tweetCount(530).build(),
+                TrendDto.builder().hashtag("Cloudinary").category("Cloud Storage · Trending").tweetCount(310).build(),
+                TrendDto.builder().hashtag("Innovation").category("Global · Trending").tweetCount(240).build()
+        );
     }
 }

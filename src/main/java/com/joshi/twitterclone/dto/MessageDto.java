@@ -9,12 +9,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DirectMessageDto {
+public class MessageDto {
     private String id;
     private String conversationId;
     private String senderUsername;
     private String senderDisplayName;
-    private String senderAvatarUrl;
     private String content;
     private String mediaUrl;
     private String mediaType;

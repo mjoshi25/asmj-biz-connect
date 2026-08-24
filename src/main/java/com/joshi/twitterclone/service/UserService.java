@@ -1,14 +1,5 @@
 package com.joshi.twitterclone.service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
 import com.joshi.twitterclone.dto.EditProfileRequest;
 import com.joshi.twitterclone.dto.ProfileDto;
 import com.joshi.twitterclone.dto.RegisterRequest;
@@ -16,8 +7,17 @@ import com.joshi.twitterclone.model.Tweet;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.repository.TweetRepository;
 import com.joshi.twitterclone.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,99 +29,144 @@ public class UserService {
     private final FileStorageService fileStorageService;
 
     public boolean usernameExists(String username) {
+        if (username == null || username.isBlank()) return false;
         return userRepository.findByUsername(username.toLowerCase().trim()).isPresent();
     }
 
     public boolean emailExists(String email) {
+        if (email == null || email.isBlank()) return false;
         return userRepository.findByEmail(email.toLowerCase().trim()).isPresent();
     }
 
-    public void registerUser(RegisterRequest request) {
+    public User registerUser(RegisterRequest request) {
+        if (usernameExists(request.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username is already taken");
+        }
+        if (emailExists(request.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is already registered");
+        }
+
         User user = new User();
         user.setUsername(request.getUsername().toLowerCase().trim());
-        user.setDisplayName(request.getDisplayName().trim());
-        user.setEmail(request.getEmail().toLowerCase().trim());
+        user.setDisplayName(request.getDisplayName() != null && !request.getDisplayName().isBlank() 
+                ? request.getDisplayName().trim() 
+                : request.getUsername());
+        user.setEmail(request.getEmail() != null ? request.getEmail().toLowerCase().trim() : "");
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        userRepository.save(user);
+        user.setRoles(Set.of("ROLE_USER"));
+        user.setCreatedAt(LocalDateTime.now());
+        user.setFollowingUsernames(new HashSet<>());
+        user.setFollowerUsernames(new HashSet<>());
+
+        return userRepository.save(user);
+    }
+
+    public User getUserByUsername(String username) {
+        if (username == null || username.isBlank()) {
+            return null;
+        }
+        return userRepository.findByUsername(username.toLowerCase().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User @" + username + " not found"));
     }
 
     public ProfileDto getProfile(String targetUsername, String currentUsername) {
-        User targetUser = userRepository.findByUsername(targetUsername.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User @" + targetUsername + " not found"));
-        User currentUser = userRepository.findByUsername(currentUsername.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Current user not found"));
+        User targetUser = getUserByUsername(targetUsername);
+        boolean isSelf = targetUser.getUsername().equalsIgnoreCase(currentUsername);
 
-        List<Tweet> tweets = tweetRepository.findByAuthorIdOrderByCreatedAtDesc(targetUser.getId());
+        boolean isFollowing = false;
+        if (!isSelf && currentUsername != null) {
+            User currentUser = userRepository.findByUsername(currentUsername.toLowerCase().trim()).orElse(null);
+            if (currentUser != null && currentUser.getFollowingUsernames() != null) {
+                isFollowing = currentUser.getFollowingUsernames().contains(targetUser.getUsername());
+            }
+        }
 
-        boolean isSelf = targetUser.getId().equals(currentUser.getId());
-        boolean isFollowing = currentUser.getFollowing().contains(targetUser.getId());
+        List<Tweet> userTweets = tweetRepository.findByAuthorIdOrderByCreatedAtDesc(targetUser.getId());
+
+        int followersCount = targetUser.getFollowerUsernames() != null ? targetUser.getFollowerUsernames().size() : 0;
+        int followingCount = targetUser.getFollowingUsernames() != null ? targetUser.getFollowingUsernames().size() : 0;
 
         return ProfileDto.builder()
                 .user(targetUser)
-                .tweets(tweets)
-                .tweetCount(tweets.size())
-                .followerCount(targetUser.getFollowers().size())
-                .followingCount(targetUser.getFollowing().size())
                 .isSelf(isSelf)
                 .isFollowing(isFollowing)
+                .followersCount(followersCount)
+                .followingCount(followingCount)
+                .tweetsCount(userTweets.size())
+                .tweets(userTweets)
                 .build();
     }
 
-    public void toggleFollow(String currentUsername, String targetUsername) {
-        if (currentUsername.equalsIgnoreCase(targetUsername)) {
-            return;
+    public boolean toggleFollow(String targetUsername, String currentUsername) {
+        if (targetUsername.equalsIgnoreCase(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot follow yourself");
         }
 
-        User currentUser = userRepository.findByUsername(currentUsername.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Current user not found"));
-        User targetUser = userRepository.findByUsername(targetUsername.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target user not found"));
+        User targetUser = getUserByUsername(targetUsername);
+        User currentUser = getUserByUsername(currentUsername);
 
-        String targetId = targetUser.getId();
-        String currentId = currentUser.getId();
+        if (currentUser.getFollowingUsernames() == null) {
+            currentUser.setFollowingUsernames(new HashSet<>());
+        }
+        if (targetUser.getFollowerUsernames() == null) {
+            targetUser.setFollowerUsernames(new HashSet<>());
+        }
 
-        if (currentUser.getFollowing().contains(targetId)) {
-            currentUser.getFollowing().remove(targetId);
-            targetUser.getFollowers().remove(currentId);
+        boolean isNowFollowing;
+        if (currentUser.getFollowingUsernames().contains(targetUser.getUsername())) {
+            currentUser.getFollowingUsernames().remove(targetUser.getUsername());
+            targetUser.getFollowerUsernames().remove(currentUser.getUsername());
+            isNowFollowing = false;
         } else {
-            currentUser.getFollowing().add(targetId);
-            targetUser.getFollowers().add(currentId);
+            currentUser.getFollowingUsernames().add(targetUser.getUsername());
+            targetUser.getFollowerUsernames().add(currentUser.getUsername());
+            isNowFollowing = true;
         }
 
         userRepository.save(currentUser);
         userRepository.save(targetUser);
-    }
 
-    public List<User> getSuggestedUsersToFollow(String currentUsername, int limit) {
-        User currentUser = userRepository.findByUsername(currentUsername.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Current user not found"));
-
-        Set<String> excludedIds = new HashSet<>(currentUser.getFollowing());
-        excludedIds.add(currentUser.getId());
-
-        return userRepository.findAll().stream()
-                .filter(u -> !excludedIds.contains(u.getId()))
-                .limit(limit)
-                .toList();
+        return isNowFollowing;
     }
 
     public User updateProfile(String username, EditProfileRequest request) {
-        User user = userRepository.findByUsername(username.toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        User user = getUserByUsername(username);
 
-        user.setDisplayName(request.getDisplayName().trim());
-        user.setBio(request.getBio() != null ? request.getBio().trim() : "");
+        if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
+            user.setDisplayName(request.getDisplayName().trim());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio().trim());
+        }
+        if (request.getLocation() != null) {
+            user.setLocation(request.getLocation().trim());
+        }
+        if (request.getWebsite() != null) {
+            user.setWebsite(request.getWebsite().trim());
+        }
 
         if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
-            String avatarPath = fileStorageService.saveFile(request.getAvatar());
-            user.setAvatarUrl(avatarPath);
+            String avatarUrl = fileStorageService.saveImageOptimized(request.getAvatar());
+            user.setAvatarUrl(avatarUrl);
         }
 
         if (request.getBanner() != null && !request.getBanner().isEmpty()) {
-            String bannerPath = fileStorageService.saveFile(request.getBanner());
-            user.setBannerUrl(bannerPath);
+            String bannerUrl = fileStorageService.saveImageOptimized(request.getBanner());
+            user.setBannerUrl(bannerUrl);
         }
 
+        return userRepository.save(user);
+    }
+
+    public List<User> getSuggestedUsersToFollow(String currentUsername, int limit) {
+        String current = currentUsername != null ? currentUsername.toLowerCase().trim() : "";
+        return userRepository.findAll().stream()
+                .filter(u -> !u.getUsername().equalsIgnoreCase(current))
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    public User saveUser(User user) {
         return userRepository.save(user);
     }
 }
