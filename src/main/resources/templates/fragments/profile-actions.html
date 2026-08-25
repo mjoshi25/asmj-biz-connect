@@ -2,17 +2,15 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<div th:fragment="follow-button" th:id="|follow-btn-container-${profile.user.username}|">
-    <button type="button"
-            th:hx-post="|/u/${profile.user.username}/follow|"
-            th:hx-headers="|{'${_csrf.headerName}': '${_csrf.token}'}|"
-            th:hx-target="|#follow-btn-container-${profile.user.username}|"
-            hx-swap="outerHTML"
-            class="px-4 py-1.5 rounded-full font-bold text-xs transition duration-200 shadow-sm"
-            th:classappend="${profile.following} ? 'bg-transparent border border-zinc-600 text-zinc-200 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10' : 'bg-white hover:bg-zinc-200 text-black'">
-        <span th:text="${profile.following} ? 'Following' : 'Follow'">Follow</span>
-    </button>
-</div>
+<button th:fragment="follow-button"
+        type="button"
+        th:hx-post="@{/u/{name}/follow(name=${profile.user.username})}"
+        hx-target="this"
+        hx-swap="outerHTML"
+        class="px-4 py-1.5 rounded-full font-bold text-xs transition duration-200 shadow-sm"
+        th:classappend="${profile.following} ? 'bg-transparent border border-zinc-600 text-zinc-200 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10' : 'bg-white hover:bg-zinc-200 text-black'">
+    <span th:text="${profile.following} ? 'Following' : 'Follow'">Follow</span>
+</button>
 
 </body>
 </html>

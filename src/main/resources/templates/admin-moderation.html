@@ -2,91 +2,141 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin Moderation / ASMJ Biz Connect</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
-<body class="bg-[#080c14] text-zinc-100 min-h-screen p-8">
-    <div class="max-w-6xl mx-auto space-y-8">
+<body class="bg-[#080c14] text-zinc-100 min-h-screen p-3.5 sm:p-6 md:p-8 antialiased">
+    <div class="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-2">
             <div>
-                <h1 class="text-xl font-bold text-white">ASMJ Marketplace Review Dashboard</h1>
-                <p class="text-xs text-zinc-500">Approve or reject newly submitted vehicle rental listings and insurance ads</p>
+                <h1 class="text-lg sm:text-xl font-bold text-white leading-tight">ASMJ Marketplace Review Dashboard</h1>
+                <p class="text-[11px] sm:text-xs text-zinc-500">Approve or reject newly submitted physical goods, SaaS tools, vehicles, and insurance ads</p>
             </div>
-            <a th:href="@{/marketplace}" class="text-xs text-blue-400 hover:underline">&larr; Back to Marketplace</a>
+            <a th:href="@{/marketplace}" class="text-xs text-blue-400 hover:underline flex items-center space-x-1 shrink-0">
+                <span>&larr;</span>
+                <span>Back to Marketplace</span>
+            </a>
         </div>
 
-        <!-- 1. Pending Vehicles -->
-        <section class="space-y-4">
-            <h2 class="text-base font-bold text-amber-400">Pending Vehicle Rentals (<span th:text="${#lists.size(pendingVehicles)}">0</span>)</h2>
+        <!-- 1. Products -->
+        <section class="space-y-3 sm:space-y-4">
+            <h2 class="text-sm sm:text-base font-bold text-emerald-400">
+                Pending Store Products (<span th:text="${#lists.size(pendingProducts)}">0</span>)
+            </h2>
             
-            <div th:if="${#lists.isEmpty(pendingVehicles)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+            <div th:if="${#lists.isEmpty(pendingProducts)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500 text-center">
+                No products waiting for review.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div th:each="p : ${pendingProducts}" class="p-4 sm:p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2.5">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-xs sm:text-sm text-white truncate" th:text="${p.title}">Product Title</h3>
+                            <span class="text-[11px] text-zinc-500 truncate block" th:text="|Seller: @${p.sellerUsername} · ${p.category}|">Seller</span>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-400 shrink-0" th:text="|₹${p.unitPrice}|">Price</span>
+                    </div>
+                    
+                    <p class="text-xs text-zinc-300 line-clamp-2" th:text="${p.description}">Description</p>
+                    <span class="text-[10px] text-zinc-500 block truncate" th:text="|📍 Shelf: ${p.shelfAisle} · Stock: ${p.stockQuantity}|">Shelf</span>
+
+                    <div class="flex space-x-2 pt-2 border-t border-zinc-800">
+                        <form th:action="|/marketplace/admin/products/${p.id}/moderate|" method="post" class="flex-1">
+                            <input type="hidden" name="approve" value="true" />
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition active:scale-95">Approve</button>
+                        </form>
+                        <form th:action="|/marketplace/admin/products/${p.id}/moderate|" method="post" class="flex-1">
+                            <input type="hidden" name="approve" value="false" />
+                            <input type="hidden" name="rejectionReason" value="Item does not meet marketplace standards" />
+                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition active:scale-95">Reject</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Vehicles -->
+        <section class="space-y-3 sm:space-y-4">
+            <h2 class="text-sm sm:text-base font-bold text-amber-400">
+                Pending Vehicle Rentals (<span th:text="${#lists.size(pendingVehicles)}">0</span>)
+            </h2>
+            
+            <div th:if="${#lists.isEmpty(pendingVehicles)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500 text-center">
                 No vehicles waiting for review.
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="v : ${pendingVehicles}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-sm text-white" th:text="|${v.year} ${v.make} ${v.modelName}|">Car</h3>
-                            <span class="text-xs text-zinc-500" th:text="|Owner: @${v.ownerUsername} (${v.contactNumber})|">Owner</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div th:each="v : ${pendingVehicles}" class="p-4 sm:p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2.5">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-xs sm:text-sm text-white truncate" th:text="|${v.year} ${v.make} ${v.modelName}|">Car</h3>
+                            <span class="text-[11px] text-zinc-500 truncate block" th:text="|Owner: @${v.ownerUsername} (${v.contactNumber})|">Owner</span>
                         </div>
-                        <span class="text-xs font-bold text-white" th:text="|₹${v.dailyRentalRate}/day|">Rate</span>
+                        <span class="text-xs font-bold text-white shrink-0" th:text="|₹${v.dailyRentalRate}/day|">Rate</span>
                     </div>
-                    <p class="text-xs text-zinc-300" th:text="${v.description}">Desc</p>
-                    <span class="text-[11px] text-zinc-500 block" th:text="|📍 ${v.locationCity} - ${v.pickupAddress}|">Location</span>
+                    
+                    <p class="text-xs text-zinc-300 line-clamp-2" th:text="${v.description}">Description</p>
+                    <span class="text-[10px] text-zinc-500 block truncate" th:text="|📍 ${v.locationCity} - ${v.pickupAddress}|">Location</span>
 
                     <div class="flex space-x-2 pt-2 border-t border-zinc-800">
                         <form th:action="|/marketplace/admin/vehicles/${v.id}/moderate|" method="post" class="flex-1">
                             <input type="hidden" name="approve" value="true" />
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Approve</button>
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition active:scale-95">Approve</button>
                         </form>
                         <form th:action="|/marketplace/admin/vehicles/${v.id}/moderate|" method="post" class="flex-1">
                             <input type="hidden" name="approve" value="false" />
                             <input type="hidden" name="rejectionReason" value="Incomplete vehicle documentation" />
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Reject</button>
+                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition active:scale-95">Reject</button>
                         </form>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 2. Pending Insurance Ads -->
-        <section class="space-y-4">
-            <h2 class="text-base font-bold text-indigo-400">Pending Insurance Ads (<span th:text="${#lists.size(pendingAds)}">0</span>)</h2>
+        <!-- 3. Insurance -->
+        <section class="space-y-3 sm:space-y-4">
+            <h2 class="text-sm sm:text-base font-bold text-indigo-400">
+                Pending Insurance Ads (<span th:text="${#lists.size(pendingAds)}">0</span>)
+            </h2>
             
-            <div th:if="${#lists.isEmpty(pendingAds)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+            <div th:if="${#lists.isEmpty(pendingAds)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500 text-center">
                 No insurance policies waiting for review.
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="ad : ${pendingAds}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-sm text-white" th:text="${ad.title}">Title</h3>
-                            <span class="text-xs text-zinc-500" th:text="|Agency: ${ad.providerCompany} (@${ad.insurerUsername})|">Agency</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div th:each="ad : ${pendingAds}" class="p-4 sm:p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2.5">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-xs sm:text-sm text-white truncate" th:text="${ad.title}">Title</h3>
+                            <span class="text-[11px] text-zinc-500 truncate block" th:text="|Agency: ${ad.providerCompany} (@${ad.insurerUsername})|">Agency</span>
                         </div>
-                        <span class="text-xs font-bold text-emerald-400" th:text="|Coverage: ₹${ad.coverageAmount}|">Coverage</span>
+                        <span class="text-xs font-bold text-emerald-400 shrink-0" th:text="|Coverage: ₹${ad.coverageAmount}|">Coverage</span>
                     </div>
-                    <p class="text-xs text-zinc-300" th:text="${ad.policyHighlights}">Highlights</p>
+                    
+                    <p class="text-xs text-zinc-300 line-clamp-2" th:text="${ad.policyHighlights}">Highlights</p>
 
                     <div class="flex space-x-2 pt-2 border-t border-zinc-800">
                         <form th:action="|/marketplace/admin/insurance/${ad.id}/moderate|" method="post" class="flex-1">
                             <input type="hidden" name="approve" value="true" />
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Approve</button>
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition active:scale-95">Approve</button>
                         </form>
                         <form th:action="|/marketplace/admin/insurance/${ad.id}/moderate|" method="post" class="flex-1">
                             <input type="hidden" name="approve" value="false" />
                             <input type="hidden" name="rejectionReason" value="Policy does not meet compliance standards" />
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Reject</button>
+                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition active:scale-95">Reject</button>
                         </form>
                     </div>
                 </div>
             </div>
         </section>
+
     </div>
 </body>
 </html>

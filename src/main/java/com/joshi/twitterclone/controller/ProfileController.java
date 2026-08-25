@@ -42,7 +42,7 @@ public class ProfileController {
                                @RequestHeader(value = "HX-Request", required = false) String hxRequest,
                                @RequestHeader(value = "Referer", required = false) String referer,
                                Model model) {
-        String currentUsername = userDetails.getUsername();
+        String currentUsername = userDetails != null ? userDetails.getUsername() : null;
         boolean isFollowing = userService.toggleFollow(targetUsername, currentUsername);
         ProfileDto profile = userService.getProfile(targetUsername, currentUsername);
 
@@ -62,7 +62,10 @@ public class ProfileController {
     @PostMapping("/edit")
     public String updateProfile(@AuthenticationPrincipal UserDetails userDetails,
                                 @ModelAttribute EditProfileRequest request) {
-        userService.updateProfile(userDetails.getUsername(), request);
-        return "redirect:/u/" + userDetails.getUsername();
+        if (userDetails != null) {
+            userService.updateProfile(userDetails.getUsername(), request);
+            return "redirect:/u/" + userDetails.getUsername();
+        }
+        return "redirect:/login";
     }
 }

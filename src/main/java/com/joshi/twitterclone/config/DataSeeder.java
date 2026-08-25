@@ -10,10 +10,7 @@ import com.joshi.twitterclone.repository.ConversationRepository;
 import com.joshi.twitterclone.repository.DirectMessageRepository;
 import com.joshi.twitterclone.repository.TweetRepository;
 import com.joshi.twitterclone.repository.UserRepository;
-import com.joshi.twitterclone.repository.marketplace.InsuranceAdRepository;
-import com.joshi.twitterclone.repository.marketplace.InsuranceQuoteRepository;
-import com.joshi.twitterclone.repository.marketplace.VehicleBookingRepository;
-import com.joshi.twitterclone.repository.marketplace.VehicleListingRepository;
+import com.joshi.twitterclone.repository.marketplace.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -36,6 +33,7 @@ public class DataSeeder implements CommandLineRunner {
     private final TweetRepository tweetRepository;
     private final ConversationRepository conversationRepository;
     private final DirectMessageRepository directMessageRepository;
+    private final MarketplaceProductRepository productRepository;
     private final VehicleListingRepository vehicleListingRepository;
     private final VehicleBookingRepository vehicleBookingRepository;
     private final InsuranceAdRepository insuranceAdRepository;
@@ -46,12 +44,13 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         log.info("Checking database state and executing granular seeders...");
 
-        // 1. Seed Core Accounts if Missing
+        // 1. Seed Core Accounts
         createAccountIfMissing("admin", "ASMJ Administrator", "admin@asmjbizconnect.com", "Official platform administrator & marketplace review moderator.", Set.of("ROLE_USER", "ROLE_ADMIN"));
         createAccountIfMissing("alex_tech", "Alex Rivera", "alex@example.com", "Cloud Architect & Fleet Operator. Building scalable microservices.", Set.of("ROLE_USER"));
         createAccountIfMissing("sarah_designs", "Sarah Chen", "sarah@example.com", "Corporate Risk Advisor & Insurance Partner at Allied Shield.", Set.of("ROLE_USER"));
+        createAccountIfMissing("john_doe", "John Doe", "john@example.com", "Logistics Coordinator & Business Consultant.", Set.of("ROLE_USER"));
 
-        // 2. Seed Posts if Empty
+        // 2. Seed Posts
         if (tweetRepository.count() == 0) {
             log.info("Seeding initial feed posts...");
             User alex = userRepository.findByUsername("alex_tech").orElse(null);
@@ -60,7 +59,7 @@ public class DataSeeder implements CommandLineRunner {
                 post1.setAuthorId(alex.getId());
                 post1.setAuthorUsername(alex.getUsername());
                 post1.setAuthorDisplayName(alex.getDisplayName());
-                post1.setContent("Excited to launch our commercial EV fleet on ASMJ Biz Connect Marketplace! Check our listings for corporate inter-city bookings. #ASMJBizConnect #Innovation");
+                post1.setContent("Excited to launch our virtual shopfront & commercial fleet on ASMJ Biz Connect! Pick items directly from the shelves into your basket. #ASMJBizConnect #Innovation");
                 post1.setLikesCount(14);
                 post1.setRepliesCount(2);
                 post1.setMediaStatus(MediaStatus.NONE);
@@ -69,9 +68,61 @@ public class DataSeeder implements CommandLineRunner {
             }
         }
 
-        // 3. Seed Vehicle Listings if Empty
+        // 3. Seed Virtual Store Products
+        if (productRepository.count() == 0) {
+            log.info("Seeding virtual storefront products on aisle shelves...");
+
+            MarketplaceProduct p1 = MarketplaceProduct.builder()
+                    .sellerUsername("alex_tech")
+                    .sellerDisplayName("Alex Rivera")
+                    .title("Dell UltraSharp 32\" 4K USB-C Hub Monitor")
+                    .description("IPS Black technology with 2000:1 contrast ratio, 90W Power Delivery, RJ45 Ethernet, and factory color calibration.")
+                    .category(ProductCategory.HARDWARE_AND_TECH)
+                    .unitPrice(BigDecimal.valueOf(54999.00))
+                    .stockQuantity(12)
+                    .shelfAisle("Aisle 1 - Tech Hardware")
+                    .badgeTag("BEST SELLER")
+                    .imageUrls(List.of("https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=800&q=80"))
+                    .status(ListingStatus.APPROVED)
+                    .createdAt(LocalDateTime.now().minusDays(3))
+                    .build();
+
+            MarketplaceProduct p2 = MarketplaceProduct.builder()
+                    .sellerUsername("sarah_designs")
+                    .sellerDisplayName("Sarah Chen")
+                    .title("Ergonomic Mesh High-Back Executive Task Chair")
+                    .description("3D adjustable lumbar support, 4D armrests, breathable Korean mesh, and heavy-duty synchronized tilt mechanism.")
+                    .category(ProductCategory.OFFICE_EQUIPMENT)
+                    .unitPrice(BigDecimal.valueOf(18500.00))
+                    .stockQuantity(20)
+                    .shelfAisle("Aisle 2 - Office Suite")
+                    .badgeTag("TOP VALUE")
+                    .imageUrls(List.of("https://images.unsplash.com/photo-1580481077197-2c93833b3aef?auto=format&fit=crop&w=800&q=80"))
+                    .status(ListingStatus.APPROVED)
+                    .createdAt(LocalDateTime.now().minusDays(2))
+                    .build();
+
+            MarketplaceProduct p3 = MarketplaceProduct.builder()
+                    .sellerUsername("alex_tech")
+                    .sellerDisplayName("Alex Rivera")
+                    .title("Enterprise Cloud Infrastructure Audit & Optimization")
+                    .description("Comprehensive AWS/GCP architecture security review, FinOps cost reduction analysis, and terraform blueprint delivery.")
+                    .category(ProductCategory.PROFESSIONAL_SERVICES)
+                    .unitPrice(BigDecimal.valueOf(75000.00))
+                    .stockQuantity(5)
+                    .shelfAisle("Aisle 3 - B2B Services")
+                    .badgeTag("SERVICE")
+                    .imageUrls(List.of("https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80"))
+                    .status(ListingStatus.APPROVED)
+                    .createdAt(LocalDateTime.now().minusDays(1))
+                    .build();
+
+            productRepository.saveAll(List.of(p1, p2, p3));
+        }
+
+        // 4. Seed Vehicles
         if (vehicleListingRepository.count() == 0) {
-            log.info("Seeding vehicle rental marketplace listings...");
+            log.info("Seeding vehicle rental listings...");
 
             VehicleListing v1 = VehicleListing.builder()
                     .ownerUsername("alex_tech")
@@ -115,34 +166,12 @@ public class DataSeeder implements CommandLineRunner {
                     .createdAt(LocalDateTime.now().minusDays(2))
                     .build();
 
-            VehicleListing v3 = VehicleListing.builder()
-                    .ownerUsername("sarah_designs")
-                    .ownerDisplayName("Sarah Chen")
-                    .contactNumber("+91 9123456780")
-                    .make("Mahindra")
-                    .modelName("Thar 4x4")
-                    .year(2023)
-                    .vehicleType(VehicleType.SUV)
-                    .fuelType("Diesel")
-                    .transmission("Manual")
-                    .seatingCapacity(4)
-                    .locationCity("Bengaluru")
-                    .pickupAddress("Koramangala 4th Block, Bengaluru")
-                    .dailyRentalRate(BigDecimal.valueOf(3500.00))
-                    .securityDeposit(BigDecimal.valueOf(7000.00))
-                    .description("Adventure-ready 4x4 SUV suited for rough terrain or corporate off-site expeditions.")
-                    .imageUrls(List.of("https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80"))
-                    .status(ListingStatus.PENDING_APPROVAL)
-                    .createdAt(LocalDateTime.now().minusHours(3))
-                    .build();
+            vehicleListingRepository.saveAll(List.of(v1, v2));
 
-            vehicleListingRepository.saveAll(List.of(v1, v2, v3));
-
-            // Seed a sample booking
             VehicleBooking booking = VehicleBooking.builder()
                     .listingId(v1.getId())
                     .vehicleSummary("2023 Hyundai Creta SX (O)")
-                    .renterUsername("admin")
+                    .renterUsername("john_doe")
                     .ownerUsername("alex_tech")
                     .startDate(LocalDate.now().plusDays(1))
                     .endDate(LocalDate.now().plusDays(4))
@@ -156,9 +185,9 @@ public class DataSeeder implements CommandLineRunner {
             vehicleBookingRepository.save(booking);
         }
 
-        // 4. Seed Insurance Ads if Empty
+        // 5. Seed Insurance Ads
         if (insuranceAdRepository.count() == 0) {
-            log.info("Seeding insurance advertisement catalog...");
+            log.info("Seeding insurance catalog...");
 
             InsuranceAd ad1 = InsuranceAd.builder()
                     .insurerUsername("sarah_designs")
@@ -186,29 +215,17 @@ public class DataSeeder implements CommandLineRunner {
                     .createdAt(LocalDateTime.now().minusDays(3))
                     .build();
 
-            InsuranceAd ad3 = InsuranceAd.builder()
-                    .insurerUsername("sarah_designs")
-                    .insurerDisplayName("Sarah Chen")
-                    .providerCompany("HDFC ERGO Enterprise")
-                    .title("B2B Cyber & Professional Indemnity Cover")
-                    .insuranceType(InsuranceType.BUSINESS_LIABILITY)
-                    .baseAnnualPremium(BigDecimal.valueOf(35000.00))
-                    .coverageAmount(BigDecimal.valueOf(5000000.00))
-                    .policyHighlights("Coverage against data breaches, liability claims, ransomware recovery, and legal defense costs.")
-                    .status(ListingStatus.PENDING_APPROVAL)
-                    .createdAt(LocalDateTime.now().minusHours(2))
-                    .build();
-
-            insuranceAdRepository.saveAll(List.of(ad1, ad2, ad3));
+            insuranceAdRepository.saveAll(List.of(ad1, ad2));
         }
 
         log.info("Database synchronization check complete.");
     }
 
     private void createAccountIfMissing(String username, String displayName, String email, String bio, Set<String> roles) {
-        if (userRepository.findByUsername(username).isEmpty()) {
+        String cleanUsername = username.trim().toLowerCase().replaceAll("\\s+", "_");
+        if (userRepository.findByUsername(cleanUsername).isEmpty()) {
             User user = new User();
-            user.setUsername(username);
+            user.setUsername(cleanUsername);
             user.setDisplayName(displayName);
             user.setEmail(email);
             user.setPassword(passwordEncoder.encode("password123"));
@@ -217,7 +234,7 @@ public class DataSeeder implements CommandLineRunner {
             user.setRoles(new HashSet<>(roles));
             user.setCreatedAt(LocalDateTime.now());
             userRepository.save(user);
-            log.info("Seeded user account: @{}", username);
+            log.info("Seeded user account: @{}", cleanUsername);
         }
     }
 }

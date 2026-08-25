@@ -28,11 +28,56 @@ public class MarketplaceService {
     private final VehicleBookingRepository bookingRepository;
     private final InsuranceAdRepository insuranceAdRepository;
     private final InsuranceQuoteRepository quoteRepository;
+    private final MarketplaceProductRepository productRepository;
     private final UserService userService;
     private final DirectMessageService directMessageService;
     private final FileStorageService fileStorageService;
 
-    // --- VEHICLE RENTALS ---
+    // --- PRODUCTS & SERVICES ---
+
+    public MarketplaceProduct createProduct(String username, MarketplaceProduct product, List<MultipartFile> images) {
+        User user = userService.getUserByUsername(username);
+        product.setSellerUsername(user.getUsername());
+        product.setSellerDisplayName(user.getDisplayName());
+        product.setStatus(ListingStatus.PENDING_APPROVAL);
+        product.setCreatedAt(LocalDateTime.now());
+
+        if (product.getShelfAisle() == null || product.getShelfAisle().isBlank()) {
+            product.setShelfAisle("Aisle 1 - Featured Products");
+        }
+
+        List<String> uploadedUrls = new ArrayList<>();
+        if (images != null) {
+            for (MultipartFile img : images) {
+                if (!img.isEmpty()) {
+                    uploadedUrls.add(fileStorageService.saveImageOptimized(img));
+                }
+            }
+        }
+        product.setImageUrls(uploadedUrls);
+        return productRepository.save(product);
+    }
+
+    public List<MarketplaceProduct> getApprovedProducts(ProductCategory category) {
+        if (category != null) {
+            return productRepository.findByStatusAndCategoryOrderByCreatedAtDesc(ListingStatus.APPROVED, category);
+        }
+        return productRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+    }
+
+    public List<MarketplaceProduct> getPendingProducts() {
+        return productRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);
+    }
+
+    public void moderateProduct(String productId, boolean approve, String rejectionReason) {
+        MarketplaceProduct product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        product.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
+        if (!approve) product.setRejectionReason(rejectionReason);
+        productRepository.save(product);
+    }
+
+    // --- VEHICLES ---
 
     public VehicleListing createVehicleListing(String username, VehicleListing listing, List<MultipartFile> images) {
         User user = userService.getUserByUsername(username);
@@ -55,7 +100,7 @@ public class MarketplaceService {
 
     public List<VehicleListing> getApprovedVehicles(String city) {
         if (city != null && !city.isBlank()) {
-            return vehicleRepository.findByStatusAndLocationCityIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, city);
+            return vehicleRepository.findByStatusAndLocationCityIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, city.trim());
         }
         return vehicleRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
     }
@@ -88,7 +133,6 @@ public class MarketplaceService {
                 .bookedAt(LocalDateTime.now())
                 .build();
 
-        // Automatically start chat between renter and vehicle owner
         Conversation convo = directMessageService.getOrCreateDirectConversation(renterUsername, vehicle.getOwnerUsername());
         directMessageService.sendMessage(renterUsername, convo.getId(), 
                 "Hello! I have booked your " + booking.getVehicleSummary() + " from " + startDate + " to " + endDate + ". Looking forward to pickup!", null);
@@ -96,7 +140,7 @@ public class MarketplaceService {
         return bookingRepository.save(booking);
     }
 
-    // --- INSURANCE ADS & QUOTES ---
+    // --- INSURANCE ---
 
     public InsuranceAd createInsuranceAd(String username, InsuranceAd ad, MultipartFile banner, MultipartFile brochure) {
         User user = userService.getUserByUsername(username);
@@ -123,8 +167,7 @@ public class MarketplaceService {
         InsuranceAd ad = insuranceAdRepository.findById(adId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance Ad not found"));
 
-        // Premium Calculation Algorithm based on policy type and value
-        BigDecimal multiplier = BigDecimal.valueOf(0.035); // 3.5% baseline
+        BigDecimal multiplier = BigDecimal.valueOf(0.035);
         if (ad.getInsuranceType() == InsuranceType.HEALTH_INDIVIDUAL || ad.getInsuranceType() == InsuranceType.HEALTH_FAMILY) {
             multiplier = age > 45 ? BigDecimal.valueOf(0.055) : BigDecimal.valueOf(0.028);
         }
@@ -133,7 +176,6 @@ public class MarketplaceService {
                 ? estimatedValue.multiply(multiplier).setScale(2, RoundingMode.HALF_UP)
                 : ad.getBaseAnnualPremium();
 
-        // Start direct conversation with Insurer
         Conversation convo = directMessageService.getOrCreateDirectConversation(username, ad.getInsurerUsername());
         String initialMsg = String.format("Hi! I generated an online quote for '%s'. Estimated Sum Insured: ₹%s. Estimated Premium: ₹%s/yr. Let's discuss policy terms.",
                 ad.getTitle(), estimatedValue != null ? estimatedValue : "Standard", calculatedPremium);
@@ -158,7 +200,7 @@ public class MarketplaceService {
         return quoteRepository.save(quote);
     }
 
-    // --- ADMIN APPROVAL WORKFLOWS ---
+    // --- MODERATION ---
 
     public List<VehicleListing> getPendingVehicles() {
         return vehicleRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);

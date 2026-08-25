@@ -8,6 +8,7 @@ import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.repository.TweetRepository;
 import com.joshi.twitterclone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -65,17 +67,23 @@ public class UserService {
         if (username == null || username.isBlank()) {
             return null;
         }
-        return userRepository.findByUsername(username.toLowerCase().trim())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User @" + username + " not found"));
+        String clean = username.trim();
+        return userRepository.findByUsername(clean.toLowerCase())
+                .or(() -> userRepository.findByUsername(clean))
+                .orElse(null);
     }
 
     public ProfileDto getProfile(String targetUsername, String currentUsername) {
         User targetUser = getUserByUsername(targetUsername);
-        boolean isSelf = targetUser.getUsername().equalsIgnoreCase(currentUsername);
+        if (targetUser == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User @" + targetUsername + " not found");
+        }
+
+        boolean isSelf = currentUsername != null && targetUser.getUsername().equalsIgnoreCase(currentUsername.trim());
 
         boolean isFollowing = false;
         if (!isSelf && currentUsername != null) {
-            User currentUser = userRepository.findByUsername(currentUsername.toLowerCase().trim()).orElse(null);
+            User currentUser = getUserByUsername(currentUsername);
             if (currentUser != null && currentUser.getFollowingUsernames() != null) {
                 isFollowing = currentUser.getFollowingUsernames().contains(targetUser.getUsername());
             }
@@ -92,18 +100,30 @@ public class UserService {
                 .isFollowing(isFollowing)
                 .followersCount(followersCount)
                 .followingCount(followingCount)
-                .tweetsCount(userTweets.size())
-                .tweets(userTweets)
+                .tweetsCount(userTweets != null ? userTweets.size() : 0)
+                .tweets(userTweets != null ? userTweets : List.of())
                 .build();
     }
 
     public boolean toggleFollow(String targetUsername, String currentUsername) {
-        if (targetUsername.equalsIgnoreCase(currentUsername)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot follow yourself");
+        if (targetUsername == null || currentUsername == null) {
+            return false;
         }
 
-        User targetUser = getUserByUsername(targetUsername);
-        User currentUser = getUserByUsername(currentUsername);
+        String cleanTarget = targetUsername.trim().toLowerCase();
+        String cleanCurrent = currentUsername.trim().toLowerCase();
+
+        if (cleanTarget.equalsIgnoreCase(cleanCurrent)) {
+            return false;
+        }
+
+        User targetUser = getUserByUsername(cleanTarget);
+        User currentUser = getUserByUsername(cleanCurrent);
+
+        if (targetUser == null || currentUser == null) {
+            log.warn("Cannot toggle follow: target ({}) or current ({}) user not found", targetUsername, currentUsername);
+            return false;
+        }
 
         if (currentUser.getFollowingUsernames() == null) {
             currentUser.setFollowingUsernames(new HashSet<>());
@@ -131,6 +151,7 @@ public class UserService {
 
     public User updateProfile(String username, EditProfileRequest request) {
         User user = getUserByUsername(username);
+        if (user == null) return null;
 
         if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
             user.setDisplayName(request.getDisplayName().trim());
@@ -159,9 +180,9 @@ public class UserService {
     }
 
     public List<User> getSuggestedUsersToFollow(String currentUsername, int limit) {
-        String current = currentUsername != null ? currentUsername.toLowerCase().trim() : "";
+        String cleanCurrent = currentUsername != null ? currentUsername.trim().toLowerCase() : "";
         return userRepository.findAll().stream()
-                .filter(u -> !u.getUsername().equalsIgnoreCase(current))
+                .filter(u -> !u.getUsername().equalsIgnoreCase(cleanCurrent))
                 .limit(limit)
                 .collect(Collectors.toList());
     }

@@ -41,7 +41,7 @@
         
         <div class="space-y-2">
             <div th:each="user : ${suggestedUsers}" class="flex items-center justify-between p-1.5 hover:bg-zinc-800/30 rounded-2xl transition">
-                <a th:href="|/u/${user.username}|" class="flex items-center space-x-2.5 min-w-0">
+                <a th:href="@{/u/{name}(name=${user.username})}" class="flex items-center space-x-2.5 min-w-0">
                     <div class="w-9 h-9 rounded-full border border-zinc-700/60 bg-blue-600 overflow-hidden flex items-center justify-center font-bold text-white shrink-0 text-xs shadow-inner">
                         <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
                         <span th:unless="${user.avatarUrl != null}" th:text="${user.displayName != null && !user.displayName.isEmpty() ? user.displayName.substring(0, 1).toUpperCase() : 'U'}">U</span>
@@ -52,17 +52,14 @@
                     </div>
                 </a>
 
-                <!-- Follow Button with Embedded CSRF Header -->
-                <div th:id="|follow-btn-container-${user.username}|">
-                    <button type="button"
-                            th:hx-post="|/u/${user.username}/follow|"
-                            th:hx-headers="|{'${_csrf.headerName}': '${_csrf.token}'}|"
-                            th:hx-target="|#follow-btn-container-${user.username}|"
-                            hx-swap="outerHTML"
-                            class="bg-white hover:bg-zinc-200 text-black font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm">
-                        Follow
-                    </button>
-                </div>
+                <!-- Follow Button Targeting Itself Directly -->
+                <button type="button"
+                        th:hx-post="@{/u/{name}/follow(name=${user.username})}"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                        class="bg-white hover:bg-zinc-200 text-black font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm">
+                    Follow
+                </button>
             </div>
         </div>
     </div>
