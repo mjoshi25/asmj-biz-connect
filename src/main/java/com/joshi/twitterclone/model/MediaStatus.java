@@ -5,5 +5,6 @@ public enum MediaStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
+	READY,
     FAILED
 }

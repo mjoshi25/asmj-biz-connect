@@ -52,13 +52,14 @@
                     </div>
                 </a>
 
-                <!-- Follow Button Targeting Itself Directly -->
+                <!-- Follow/Following Button -->
                 <button type="button"
                         th:hx-post="@{/u/{name}/follow(name=${user.username})}"
                         hx-target="this"
                         hx-swap="outerHTML"
-                        class="bg-white hover:bg-zinc-200 text-black font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm">
-                    Follow
+                        class="font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm"
+                        th:classappend="${currentUser != null and currentUser.followingUsernames != null and currentUser.followingUsernames.contains(user.username)} ? 'bg-transparent border border-zinc-600 text-zinc-200 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10' : 'bg-white hover:bg-zinc-200 text-black'">
+                    <span th:text="${currentUser != null and currentUser.followingUsernames != null and currentUser.followingUsernames.contains(user.username)} ? 'Following' : 'Follow'">Follow</span>
                 </button>
             </div>
         </div>

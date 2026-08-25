@@ -15,7 +15,7 @@
 
     <div class="max-w-[1400px] mx-auto flex justify-center min-h-screen">
         
-        <!-- Left Navigation Sidebar & Mobile Headers -->
+        <!-- Left Nav -->
         <div th:replace="~{fragments/navigation :: left-nav(activeTab='home')}"></div>
 
         <!-- Middle Column: Main Feed -->
@@ -35,11 +35,19 @@
 
             <!-- Feed Tabs (For You / Following) -->
             <div class="flex border-b border-zinc-800/80 text-xs font-bold text-center">
-                <a th:href="@{/home}" class="flex-1 py-3 text-white border-b-2 border-blue-500">For You</a>
-                <a th:href="@{/home(filter='following')}" class="flex-1 py-3 text-zinc-500 hover:text-zinc-300 transition">Following</a>
+                <a th:href="@{/home(filter='for-you')}" 
+                   class="flex-1 py-3 transition"
+                   th:classappend="${activeFilter == null or activeFilter == 'for-you'} ? 'text-white border-b-2 border-blue-500' : 'text-zinc-500 hover:text-zinc-300'">
+                    For You
+                </a>
+                <a th:href="@{/home(filter='following')}" 
+                   class="flex-1 py-3 transition"
+                   th:classappend="${activeFilter == 'following'} ? 'text-white border-b-2 border-blue-500' : 'text-zinc-500 hover:text-zinc-300'">
+                    Following
+                </a>
             </div>
 
-            <!-- In-Feed Post Composer (Visible on Tablets & Desktops) -->
+            <!-- In-Feed Post Composer -->
             <div class="hidden sm:block p-4 border-b border-zinc-800/80 bg-zinc-950/40">
                 <form th:action="@{/timeline/tweets}" method="post" enctype="multipart/form-data" class="space-y-3">
                     <div class="flex space-x-3">
@@ -67,12 +75,12 @@
                 </form>
             </div>
 
-            <!-- Feed Stream Area -->
+            <!-- Feed List Fragment -->
             <div id="timeline-posts-container">
                 <div th:replace="~{fragments/tweet-feed :: tweet-list}"></div>
             </div>
 
-            <!-- Mobile Action Floating Button -->
+            <!-- Mobile Post Floating Button -->
             <div class="sm:hidden fixed bottom-20 right-4 z-30">
                 <button type="button" 
                         onclick="document.getElementById('quick-post-modal').classList.remove('hidden')"
@@ -85,7 +93,7 @@
 
         </main>
 
-        <!-- Right Column: Trending & Follow Suggestions -->
+        <!-- Right Sidebar -->
         <div th:replace="~{fragments/sidebar :: right-sidebar}"></div>
 
     </div>

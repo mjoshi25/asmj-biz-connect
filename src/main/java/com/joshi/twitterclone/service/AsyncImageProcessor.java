@@ -1,51 +1,49 @@
 package com.joshi.twitterclone.service;
 
-import com.joshi.twitterclone.model.MediaStatus;
-import com.joshi.twitterclone.model.Tweet;
-import com.joshi.twitterclone.repository.TweetRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Map;
+import com.joshi.twitterclone.model.MediaStatus;
+import com.joshi.twitterclone.repository.TweetRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AsyncImageProcessor {
 
+    private final FileStorageService fileStorageService;
     private final TweetRepository tweetRepository;
-    private final SimpMessagingTemplate messagingTemplate;
 
     @Async
-    public void processTweetImageAsync(String tweetId, String rawImageUrl) {
+    public CompletableFuture<Void> processAndAttachImage(String tweetId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
         try {
-            Tweet tweet = tweetRepository.findById(tweetId).orElse(null);
-            if (tweet == null) return;
+            log.info("Processing media for tweet ID: {}", tweetId);
+            String imageUrl = fileStorageService.saveImageOptimized(file);
 
-            tweet.setImageUrl(rawImageUrl);
-            tweet.setBlurHash(null);
-            tweet.setBlurDataUrl(rawImageUrl);
-            tweet.setMediaStatus(MediaStatus.COMPLETED);
-
-            tweetRepository.save(tweet);
-
-            // Broadcast WebSocket notification to clients
-            messagingTemplate.convertAndSend("/topic/tweet-media", Map.of(
-                    "tweetId", tweetId,
-                    "imageUrl", rawImageUrl,
-                    "blurDataUrl", rawImageUrl,
-                    "status", "COMPLETED"
-            ));
-
+            tweetRepository.findById(tweetId).ifPresent(tweet -> {
+                tweet.setImageUrl(imageUrl);
+                tweet.setMediaStatus(MediaStatus.READY);
+                tweetRepository.save(tweet);
+                log.info("Media processing completed for tweet ID: {}", tweetId);
+            });
         } catch (Exception e) {
-            log.error("Async image processing failed for tweet [{}]: {}", tweetId, e.getMessage());
-            tweetRepository.findById(tweetId).ifPresent(t -> {
-                t.setMediaStatus(MediaStatus.FAILED);
-                tweetRepository.save(t);
+            log.error("Failed to process media for tweet ID {}: {}", tweetId, e.getMessage());
+            tweetRepository.findById(tweetId).ifPresent(tweet -> {
+                tweet.setMediaStatus(MediaStatus.FAILED);
+                tweetRepository.save(tweet);
             });
         }
+
+        return CompletableFuture.completedFuture(null);
     }
 }
