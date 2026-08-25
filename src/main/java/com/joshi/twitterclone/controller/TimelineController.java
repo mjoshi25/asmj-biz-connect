@@ -23,7 +23,7 @@ public class TimelineController {
     private final TweetService tweetService;
     private final UserService userService;
 
-    @GetMapping({"/", "/home", "/timeline"})
+    @GetMapping({"/home", "/timeline"})
     public String home(@AuthenticationPrincipal UserDetails userDetails,
                        @RequestParam(value = "filter", defaultValue = "for-you") String filter,
                        Model model) {

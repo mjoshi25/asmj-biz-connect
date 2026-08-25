@@ -1,8 +1,7 @@
 package com.joshi.twitterclone.controller;
 
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -10,16 +9,24 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class PublicController {
 
     @GetMapping("/")
-    public String index() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+    public String index(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails != null) {
             return "redirect:/home";
         }
-        return "landing";
+        // Option A: Render a public landing/welcome page
+        return "landing"; 
+        
+        // Option B: If you want unauthenticated users to directly see the timeline feed:
+        // return "redirect:/home";
     }
 
     @GetMapping("/privacy")
-    public String privacyPolicy() {
+    public String privacy() {
         return "privacy";
+    }
+
+    @GetMapping("/terms")
+    public String terms() {
+        return "terms";
     }
 }
