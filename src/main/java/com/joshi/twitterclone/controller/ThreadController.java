@@ -1,8 +1,9 @@
 package com.joshi.twitterclone.controller;
 
-import com.joshi.twitterclone.dto.ThreadViewDto;
+import com.joshi.twitterclone.dto.ThreadDto;
 import com.joshi.twitterclone.model.Tweet;
 import com.joshi.twitterclone.model.User;
+import com.joshi.twitterclone.service.EventService;
 import com.joshi.twitterclone.service.TweetService;
 import com.joshi.twitterclone.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Controller
 @RequestMapping("/tweets")
@@ -19,42 +21,39 @@ public class ThreadController {
 
     private final TweetService tweetService;
     private final UserService userService;
+    private final EventService eventService;
 
-    @GetMapping("/{id}")
-    public String viewThread(@PathVariable("id") String id,
+    @GetMapping("/{tweetId}")
+    public String viewThread(@PathVariable("tweetId") String tweetId,
                              @AuthenticationPrincipal UserDetails userDetails,
                              Model model) {
         String username = userDetails != null ? userDetails.getUsername() : null;
         User currentUser = username != null ? userService.getUserByUsername(username) : null;
-        ThreadViewDto thread = tweetService.getThread(id);
 
-        model.addAttribute("thread", thread);
+        ThreadDto thread = tweetService.getThread(tweetId, username);
+
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("thread", thread);
         model.addAttribute("trending", tweetService.getTrendingHashtags());
-        model.addAttribute("suggestedUsers", userService.getSuggestedUsersToFollow(username, 4));
+        model.addAttribute("upcomingEvents", eventService.getTopUpcomingEvents(3));
 
-        return "thread";
+        return "timeline";
     }
 
-    @PostMapping("/{id}/reply")
-    public String replyToTweet(@PathVariable("id") String id,
+    @PostMapping("/{tweetId}/reply")
+    public String replyToTweet(@PathVariable("tweetId") String tweetId,
                                @AuthenticationPrincipal UserDetails userDetails,
-                               @RequestParam("content") String content) {
-        if (userDetails != null) {
-            tweetService.createReply(userDetails.getUsername(), id, content);
-            return "redirect:/tweets/" + id;
-        }
-        return "redirect:/login";
+                               @RequestParam("content") String content,
+                               @RequestParam(value = "image", required = false) MultipartFile image) {
+        tweetService.replyToTweet(userDetails.getUsername(), tweetId, content, image);
+        return "redirect:/tweets/" + tweetId;
     }
 
-    @PostMapping("/{id}/like")
-    public String toggleLike(@PathVariable("id") String id,
-                             @AuthenticationPrincipal UserDetails userDetails,
-                             Model model) {
-        String username = userDetails != null ? userDetails.getUsername() : null;
-        Tweet tweet = tweetService.toggleLike(id, username);
-        model.addAttribute("tweet", tweet);
-        model.addAttribute("currentUser", username != null ? userService.getUserByUsername(username) : null);
-        return "fragments/tweet-feed :: tweet-list";
+    @PostMapping("/{tweetId}/like")
+    @ResponseBody
+    public int toggleLike(@PathVariable("tweetId") String tweetId,
+                          @AuthenticationPrincipal UserDetails userDetails) {
+        Tweet updatedTweet = tweetService.toggleLike(tweetId, userDetails.getUsername());
+        return updatedTweet.getLikesCount();
     }
 }

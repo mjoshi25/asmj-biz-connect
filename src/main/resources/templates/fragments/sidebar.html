@@ -17,7 +17,35 @@
         </form>
     </div>
 
-    <!-- Trending Topics -->
+    <!-- Upcoming Events Card (Replaces Follow Box) -->
+    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
+        <div class="flex items-center justify-between px-1">
+            <h2 class="text-sm font-black text-white">Upcoming Events</h2>
+            <a th:href="@{/events}" class="text-[11px] text-sky-400 hover:underline">View All</a>
+        </div>
+        
+        <div class="space-y-2">
+            <div th:each="evt : ${upcomingEvents}" class="p-2.5 bg-zinc-900/70 border border-zinc-800/60 rounded-2xl space-y-1.5 hover:border-zinc-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full uppercase" th:text="${evt.eventType}">Type</span>
+                    <span class="text-[10px] text-zinc-500" th:text="${evt.formattedDate}">Date</span>
+                </div>
+                <h4 class="font-bold text-xs text-white truncate" th:text="${evt.title}">Event Title</h4>
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-[11px] font-bold text-emerald-400" th:text="${evt.ticketPrice == 0 || evt.ticketPrice == null} ? 'Free Entry' : |₹${evt.ticketPrice}|">Free</span>
+                    <a th:href="@{/events}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1 rounded-full text-[10px] transition shadow-sm active:scale-95">
+                        Book
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${upcomingEvents == null or #lists.isEmpty(upcomingEvents)}" class="text-center py-4 text-xs text-zinc-500">
+                No upcoming events this week.
+            </div>
+        </div>
+    </div>
+
+    <!-- What's Happening Card -->
     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
         <h2 class="text-sm font-black text-white px-1">What's happening</h2>
         
@@ -28,39 +56,6 @@
                     <a th:href="@{/explore(q='#' + ${trend.hashtag})}" class="font-bold text-xs text-white hover:text-sky-400 transition" th:text="'#' + ${trend.hashtag}">#Topic</a>
                     <span class="text-[10px] text-zinc-500 block mt-0.5" th:text="${trend.tweetCount + ' posts'}">0 posts</span>
                 </div>
-                <svg class="w-4 h-4 text-zinc-600 hover:text-zinc-400 transition" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                </svg>
-            </div>
-        </div>
-    </div>
-
-    <!-- Who to Follow -->
-    <div th:if="${suggestedUsers != null and !suggestedUsers.isEmpty()}" class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
-        <h2 class="text-sm font-black text-white px-1">Who to follow</h2>
-        
-        <div class="space-y-2">
-            <div th:each="user : ${suggestedUsers}" class="flex items-center justify-between p-1.5 hover:bg-zinc-800/30 rounded-2xl transition">
-                <a th:href="@{/u/{name}(name=${user.username})}" class="flex items-center space-x-2.5 min-w-0">
-                    <div class="w-9 h-9 rounded-full border border-zinc-700/60 bg-blue-600 overflow-hidden flex items-center justify-center font-bold text-white shrink-0 text-xs shadow-inner">
-                        <img th:if="${user.avatarUrl != null}" th:src="${user.avatarUrl}" class="w-full h-full object-cover" />
-                        <span th:unless="${user.avatarUrl != null}" th:text="${user.displayName != null && !user.displayName.isEmpty() ? user.displayName.substring(0, 1).toUpperCase() : 'U'}">U</span>
-                    </div>
-                    <div class="flex flex-col min-w-0 text-left">
-                        <span class="font-bold text-xs text-white hover:text-sky-400 transition truncate" th:text="${user.displayName}">Name</span>
-                        <span class="text-[11px] text-zinc-500 truncate" th:text="|@${user.username}|">@handle</span>
-                    </div>
-                </a>
-
-                <!-- Follow/Following Button -->
-                <button type="button"
-                        th:hx-post="@{/u/{name}/follow(name=${user.username})}"
-                        hx-target="this"
-                        hx-swap="outerHTML"
-                        class="font-bold px-3 py-1 rounded-full text-xs transition active:scale-95 shadow-sm"
-                        th:classappend="${currentUser != null and currentUser.followingUsernames != null and currentUser.followingUsernames.contains(user.username)} ? 'bg-transparent border border-zinc-600 text-zinc-200 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10' : 'bg-white hover:bg-zinc-200 text-black'">
-                    <span th:text="${currentUser != null and currentUser.followingUsernames != null and currentUser.followingUsernames.contains(user.username)} ? 'Following' : 'Follow'">Follow</span>
-                </button>
             </div>
         </div>
     </div>

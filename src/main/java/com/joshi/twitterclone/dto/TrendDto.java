@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TrendDto {
     private String hashtag;
+    private int tweetCount;
     private String category;
-    private long tweetCount;
 }

@@ -1,9 +1,5 @@
 package com.joshi.twitterclone.config;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,14 +11,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -42,28 +32,17 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        tokenRepository.setCookiePath("/");
-
-        // Plain handler resolves both standard form parameters (_csrf) AND raw headers (X-XSRF-TOKEN / X-CSRF-TOKEN)
-        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-        requestHandler.setCsrfRequestAttributeName(null);
-
         http
             .csrf(csrf -> csrf
-                .csrfTokenRepository(tokenRepository)
-                .csrfTokenRequestHandler(requestHandler)
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .ignoringRequestMatchers(
                     new AntPathRequestMatcher("/ws/**"),
-                    new AntPathRequestMatcher("/ws-feed/**"),
-                    new AntPathRequestMatcher("/logout")
+                    new AntPathRequestMatcher("/ws-feed/**")
                 )
             )
-            .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/",
-                    "/error",
                     "/login",
                     "/register",
                     "/privacy",
@@ -91,12 +70,12 @@ public class SecurityConfig {
                     "/messages/**",
                     "/marketplace",
                     "/marketplace/**",
+                    "/jobs",
+                    "/jobs/**",
                     "/resume",
                     "/resume/**",
                     "/u",
                     "/u/**",
-                    "/tweets",
-                    "/tweets/**",
                     "/explore",
                     "/explore/**"
                 ).authenticated()
@@ -123,17 +102,5 @@ public class SecurityConfig {
             );
 
         return http.build();
-    }
-
-    private static class CsrfCookieFilter extends OncePerRequestFilter {
-        @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-                throws ServletException, IOException {
-            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-            if (csrfToken != null) {
-                csrfToken.getToken();
-            }
-            filterChain.doFilter(request, response);
-        }
     }
 }

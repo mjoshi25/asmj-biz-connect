@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard / ASMJ Biz Connect</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <div>
+                <h1 class="text-xl font-bold text-white">Vendor Offerings & Inquiries Portal</h1>
+                <p class="text-xs text-zinc-500">Track client quotes, product leads, and review status</p>
+            </div>
+            <a th:href="@{/marketplace}" class="text-xs text-sky-400 hover:underline">&larr; Back to Marketplace</a>
+        </div>
+
+        <!-- 1. Received Client Inquiries -->
+        <section class="space-y-4">
+            <h2 class="text-sm font-bold text-white">Received B2B Inquiries (<span th:text="${#lists.size(receivedInquiries)}">0</span>)</h2>
+
+            <div th:if="${#lists.isEmpty(receivedInquiries)}" class="p-8 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                No buyer inquiries received yet.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:each="inq : ${receivedInquiries}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-sm text-white" th:text="${inq.buyerName}">Buyer Name</h3>
+                            <span class="text-xs text-zinc-400" th:text="|Company: ${inq.buyerCompanyName} · @${inq.buyerUsername}|">Company</span>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-sky-400 border border-blue-500/30" th:text="${inq.status}">NEW</span>
+                    </div>
+
+                    <div class="text-xs text-zinc-300 space-y-1">
+                        <p th:text="|Item: ${inq.listingTitle}|">Item</p>
+                        <p th:text="|Qty: ${inq.requestedQuantity} · Budget: ₹${inq.proposedBudget}|">Budget</p>
+                        <p class="text-zinc-400 italic" th:text="|“${inq.projectRequirements}”|">Requirements</p>
+                        <p class="text-[11px] text-zinc-500" th:text="|📧 ${inq.buyerEmail} · 📞 ${inq.buyerPhone}|">Contact</p>
+                    </div>
+
+                    <div class="pt-2 border-t border-zinc-800 flex justify-end">
+                        <a th:href="@{/messages}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-1.5 rounded-xl text-xs transition">
+                            Open Chat
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. My Posted Offerings -->
+        <section class="space-y-4">
+            <h2 class="text-sm font-bold text-white">My Listings (<span th:text="${#lists.size(myOfferings)}">0</span>)</h2>
+
+            <div th:if="${#lists.isEmpty(myOfferings)}" class="p-8 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                You have not listed any products or services yet.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:each="off : ${myOfferings}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-sm text-white" th:text="${off.title}">Title</h3>
+                        <span class="text-xs font-bold" 
+                              th:classappend="${off.status.name() == 'APPROVED'} ? 'text-emerald-400' : 'text-amber-400'"
+                              th:text="${off.status}">STATUS</span>
+                    </div>
+                    <p class="text-xs text-zinc-400" th:text="${off.description}">Description</p>
+                    <div class="flex justify-between items-center pt-2 border-t border-zinc-800 text-xs text-zinc-500">
+                        <span th:text="|Price: ₹${off.price} / ${off.pricingModel}|">Price</span>
+                        <span th:text="|${off.inquiryCount} Leads|">0 Leads</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+</html>

@@ -2,16 +2,19 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- Unified Follow / Following Button Fragment -->
-<button th:fragment="follow-button"
-        type="button"
-        th:hx-post="@{/u/{name}/follow(name=${profile.user.username})}"
-        hx-target="this"
-        hx-swap="outerHTML"
-        class="px-4 py-1.5 rounded-full font-bold text-xs transition duration-200 shadow-sm"
-        th:classappend="${profile.isFollowing or profile.following} ? 'bg-transparent border border-zinc-600 text-zinc-200 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10' : 'bg-white hover:bg-zinc-200 text-black'">
-    <span th:text="${profile.isFollowing or profile.following} ? 'Following' : 'Follow'">Follow</span>
-</button>
+<div th:fragment="follow-button" th:id="|follow-btn-container-${profile.user.username}|">
+    <form th:hx-post="|/u/${profile.user.username}/follow|"
+          th:hx-target="|#follow-btn-container-${profile.user.username}|"
+          hx-swap="outerHTML"
+          class="inline-block m-0 p-0">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button type="submit"
+                class="px-4 py-1.5 rounded-full font-bold text-xs transition duration-200 shadow-sm cursor-pointer select-none active:scale-95"
+                th:classappend="${profile.following} ? 'bg-transparent border border-zinc-600 text-zinc-200 hover:border-rose-600 hover:text-rose-500 hover:bg-rose-500/10' : 'bg-white hover:bg-zinc-200 text-black'">
+            <span th:text="${profile.following} ? 'Following' : 'Follow'">Follow</span>
+        </button>
+    </form>
+</div>
 
 </body>
 </html>

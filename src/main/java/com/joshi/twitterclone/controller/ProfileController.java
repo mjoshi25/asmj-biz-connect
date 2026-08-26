@@ -3,6 +3,7 @@ package com.joshi.twitterclone.controller;
 import com.joshi.twitterclone.dto.EditProfileRequest;
 import com.joshi.twitterclone.dto.ProfileDto;
 import com.joshi.twitterclone.model.User;
+import com.joshi.twitterclone.service.EventService;
 import com.joshi.twitterclone.service.TweetService;
 import com.joshi.twitterclone.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ProfileController {
 
     private final UserService userService;
     private final TweetService tweetService;
+    private final EventService eventService;
 
     @GetMapping("/{username}")
     public String viewProfile(@PathVariable("username") String username,
@@ -31,41 +33,15 @@ public class ProfileController {
         model.addAttribute("profile", profile);
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("trending", tweetService.getTrendingHashtags());
-        model.addAttribute("suggestedUsers", userService.getSuggestedUsersToFollow(currentUsername, 4));
+        model.addAttribute("upcomingEvents", eventService.getTopUpcomingEvents(3));
 
         return "profile";
-    }
-
-    @PostMapping("/{username}/follow")
-    public String toggleFollow(@PathVariable("username") String targetUsername,
-                               @AuthenticationPrincipal UserDetails userDetails,
-                               @RequestHeader(value = "HX-Request", required = false) String hxRequest,
-                               @RequestHeader(value = "Referer", required = false) String referer,
-                               Model model) {
-        String currentUsername = userDetails != null ? userDetails.getUsername() : null;
-        boolean isFollowing = userService.toggleFollow(targetUsername, currentUsername);
-        ProfileDto profile = userService.getProfile(targetUsername, currentUsername);
-
-        if ("true".equalsIgnoreCase(hxRequest)) {
-            model.addAttribute("profile", profile);
-            model.addAttribute("targetUsername", targetUsername);
-            model.addAttribute("isFollowing", isFollowing);
-            return "fragments/profile-actions :: follow-button";
-        }
-
-        if (referer != null && !referer.isBlank()) {
-            return "redirect:" + referer;
-        }
-        return "redirect:/u/" + targetUsername;
     }
 
     @PostMapping("/edit")
     public String updateProfile(@AuthenticationPrincipal UserDetails userDetails,
                                 @ModelAttribute EditProfileRequest request) {
-        if (userDetails != null) {
-            userService.updateProfile(userDetails.getUsername(), request);
-            return "redirect:/u/" + userDetails.getUsername();
-        }
-        return "redirect:/login";
+        userService.updateProfile(userDetails.getUsername(), request);
+        return "redirect:/u/" + userDetails.getUsername();
     }
 }

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -12,23 +13,35 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AutocompleteResultDto {
-    private String query;
-    private List<UserSuggestionDto> users;
-    private List<HashtagSuggestionDto> hashtags;
+
+    @Builder.Default
+    private List<String> suggestions = new ArrayList<>();
+
+    @Builder.Default
+    private List<HashtagSuggestionDto> hashtags = new ArrayList<>();
+
+    @Builder.Default
+    private List<UserSuggestionDto> users = new ArrayList<>();
+
+    @Builder.Default
+    private List<String> usernames = new ArrayList<>();
 
     @Data
-    @AllArgsConstructor
+    @Builder
     @NoArgsConstructor
-    public static class UserSuggestionDto {
-        private String username;
-        private String displayName;
+    @AllArgsConstructor
+    public static class HashtagSuggestionDto {
+        private String tag;
+        private int count;
     }
 
     @Data
-    @AllArgsConstructor
+    @Builder
     @NoArgsConstructor
-    public static class HashtagSuggestionDto {
-        private String tag;
-        private long count;
+    @AllArgsConstructor
+    public static class UserSuggestionDto {
+        private String username;
+        private String displayName;
+        private String avatarUrl;
     }
 }

@@ -2,32 +2,33 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Messages / ASMJ Biz Connect</title>
-    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" />
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" th:href="@{/css/animations.css}" />
-    <script th:src="@{/js/app.js}"></script>
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
-<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased">
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased overflow-x-hidden">
 
     <div class="max-w-[1400px] mx-auto flex justify-center min-h-screen">
 
+        <!-- Responsive Navigation -->
         <div th:replace="~{fragments/navigation :: left-nav(activeTab='messages')}"></div>
 
-        <!-- Middle Column: Conversations List -->
-        <div class="w-full sm:w-80 md:w-96 border-r border-zinc-800/80 min-h-screen flex flex-col bg-zinc-950/40">
+        <!-- Middle Column: Conversations List (Hidden on mobile if a convo is open) -->
+        <div class="w-full md:w-80 lg:w-96 border-r border-zinc-800/80 min-h-screen flex flex-col bg-zinc-950/40 pt-14 md:pt-0 pb-16 md:pb-0"
+             th:classappend="${activeConvoId != null} ? 'hidden md:flex' : 'flex'">
             
-            <!-- Messages Header with Functional + Button -->
-            <div class="h-16 px-5 border-b border-zinc-800/80 flex items-center justify-between bg-[#080c14]/80 backdrop-blur-md sticky top-0 z-20">
-                <h1 class="text-lg font-bold text-white leading-none">Messages</h1>
+            <!-- Messages Header -->
+            <div class="h-14 md:h-16 px-4 border-b border-zinc-800/80 flex items-center justify-between bg-[#080c14]/90 backdrop-blur-md sticky top-14 md:top-0 z-20">
+                <h1 class="text-base sm:text-lg font-bold text-white leading-none">Messages</h1>
                 
                 <button type="button" 
                         onclick="document.getElementById('new-convo-modal').classList.remove('hidden')"
-                        class="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition shadow-md shadow-blue-500/25"
+                        class="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition shadow-md active:scale-95"
                         title="New Conversation">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
@@ -35,80 +36,66 @@
                 </button>
             </div>
 
-            <!-- Conversations Scrollable List -->
+            <!-- Conversations List -->
             <div class="flex-1 overflow-y-auto divide-y divide-zinc-800/40">
                 <div th:if="${#lists.isEmpty(conversations)}" class="p-8 text-center text-xs text-zinc-500">
-                    No active chats. Click <strong class="text-blue-400">+</strong> above to connect with other users!
+                    No active chats. Tap <strong class="text-blue-400">+</strong> above to start messaging!
                 </div>
 
                 <a th:each="convo : ${conversations}"
                    th:href="|/messages?convo=${convo.conversationId}|"
-                   hx-push-url="true"
-                   th:hx-get="|/messages/conversation/${convo.conversationId}|"
-                   hx-target="#chat-window-container"
-                   hx-swap="outerHTML"
                    th:classappend="${activeConvoId == convo.conversationId} ? 'bg-zinc-800/60 border-l-2 border-blue-500' : 'hover:bg-zinc-900/50'"
-                   class="p-4 flex items-center space-x-3 transition cursor-pointer group block">
+                   class="p-3.5 sm:p-4 flex items-center space-x-3 transition cursor-pointer group block">
                     
-                    <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-inner">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-inner">
                         <span th:text="${convo.defaultInitial}">U</span>
                     </div>
 
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <span class="font-bold text-xs text-white truncate group-hover:text-sky-400 transition" th:text="${convo.title}">User</span>
+                            <span class="font-bold text-xs text-white truncate" th:text="${convo.title}">User</span>
                             <span class="text-[10px] text-zinc-500 shrink-0" th:text="${convo.lastMessageTimeFormatted}">Time</span>
                         </div>
-                        <p class="text-xs text-zinc-400 truncate" th:text="${convo.lastMessage}">Last message preview...</p>
+                        <p class="text-xs text-zinc-400 truncate" th:text="${convo.lastMessage}">Preview...</p>
                     </div>
                 </a>
             </div>
         </div>
 
-        <!-- Right Column: Active Chat Panel -->
-        <main id="chat-panel" class="hidden sm:flex flex-1 flex-col min-h-screen bg-[#080c14]">
+        <!-- Right Column: Active Chat Panel (Full width on mobile when convo is open) -->
+        <main id="chat-panel" 
+              class="w-full md:flex-1 flex flex-col min-h-screen bg-[#080c14] pt-14 md:pt-0 pb-16 md:pb-0"
+              th:classappend="${activeConvoId == null} ? 'hidden md:flex' : 'flex'">
+            
+            <!-- Mobile Top Return Bar -->
+            <div th:if="${activeConvoId != null}" class="md:hidden h-12 bg-zinc-950 border-b border-zinc-800 px-3 flex items-center justify-between shrink-0 sticky top-14 z-20">
+                <a th:href="@{/messages}" class="text-xs font-bold text-sky-400 flex items-center space-x-1 py-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                    <span>Back to Chats</span>
+                </a>
+            </div>
+
             <div th:replace="~{fragments/message-panel :: chat-window}"></div>
         </main>
     </div>
 
-    <!-- Modal: Start New Conversation -->
-    <div id="new-convo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-        <div class="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            
+    <!-- Modal: New Conversation -->
+    <div id="new-convo-modal" class="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 class="text-base font-bold text-white">Start New Message</h3>
-                <button type="button" onclick="document.getElementById('new-convo-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+                <h3 class="text-sm font-bold text-white">Start New Message</h3>
+                <button type="button" onclick="document.getElementById('new-convo-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white p-1 text-lg">&times;</button>
             </div>
 
-            <!-- Direct 1-on-1 Chat Form -->
             <form th:action="@{/messages/direct/start}" method="post" class="space-y-3">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <label class="block text-xs font-semibold text-zinc-300">Recipient Username</label>
                 <div class="flex space-x-2">
-                    <input type="text" name="recipient" required placeholder="e.g. alex_tech or sarah_designs"
-                           class="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500" />
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
-                        Chat
-                    </button>
+                    <input type="text" name="recipient" required placeholder="e.g. alex_tech"
+                           class="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500" />
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition active:scale-95">Chat</button>
                 </div>
             </form>
-
-            <div class="border-t border-zinc-800/80 pt-3">
-                <span class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">Or Create Group</span>
-                
-                <form th:action="@{/messages/group/create}" method="post" class="space-y-3">
-                    <input type="text" name="name" required placeholder="Group Name (e.g. Backend Devs)"
-                           class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500" />
-                    
-                    <input type="text" name="memberUsernames" required placeholder="Usernames separated by commas (e.g. alex_tech, sarah_designs)"
-                           class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500" />
-                    
-                    <button type="submit" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-bold py-2 rounded-xl text-xs transition">
-                        Create Group
-                    </button>
-                </form>
-            </div>
         </div>
     </div>
 

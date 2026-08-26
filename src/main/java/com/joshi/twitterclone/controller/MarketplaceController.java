@@ -1,12 +1,13 @@
 package com.joshi.twitterclone.controller;
 
 import com.joshi.twitterclone.model.User;
-import com.joshi.twitterclone.model.marketplace.*;
-import com.joshi.twitterclone.service.CartService;
+import com.joshi.twitterclone.model.marketplace.InsuranceAd;
+import com.joshi.twitterclone.model.marketplace.VehicleListing;
+import com.joshi.twitterclone.service.EventService;
 import com.joshi.twitterclone.service.MarketplaceService;
+import com.joshi.twitterclone.service.ProductServiceItemService;
 import com.joshi.twitterclone.service.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,85 +19,41 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
-@Slf4j
 @Controller
 @RequestMapping("/marketplace")
 @RequiredArgsConstructor
 public class MarketplaceController {
 
     private final MarketplaceService marketplaceService;
-    private final CartService cartService;
+    private final ProductServiceItemService productServiceItemService;
     private final UserService userService;
+    private final EventService eventService;
 
     @GetMapping
     public String viewMarketplace(@AuthenticationPrincipal UserDetails userDetails,
-                                  @RequestParam(value = "tab", defaultValue = "shop") String tab,
-                                  @RequestParam(value = "category", required = false) ProductCategory category,
+                                  @RequestParam(value = "tab", defaultValue = "vehicles") String tab,
                                   @RequestParam(value = "city", required = false) String city,
                                   Model model) {
         String username = userDetails != null ? userDetails.getUsername() : "";
         User currentUser = userService.getUserByUsername(username);
 
+        List<VehicleListing> vehicles = marketplaceService.getApprovedVehicles(city);
+        List<InsuranceAd> insuranceAds = marketplaceService.getApprovedInsuranceAds();
+
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("activeTab", tab != null ? tab.trim().toLowerCase() : "shop");
-        model.addAttribute("products", marketplaceService.getApprovedProducts(category));
-        model.addAttribute("vehicles", marketplaceService.getApprovedVehicles(city));
-        model.addAttribute("insuranceAds", marketplaceService.getApprovedInsuranceAds());
-        model.addAttribute("cart", cartService.getOrCreateCart(username));
+        model.addAttribute("activeTab", tab != null ? tab.trim().toLowerCase() : "vehicles");
+        model.addAttribute("vehicles", vehicles != null ? vehicles : Collections.emptyList());
+        model.addAttribute("insuranceAds", insuranceAds != null ? insuranceAds : Collections.emptyList());
         model.addAttribute("selectedCity", city != null ? city : "");
-        model.addAttribute("selectedCategory", category);
+        model.addAttribute("upcomingEvents", eventService.getTopUpcomingEvents(3));
 
         return "marketplace";
     }
 
-    @PostMapping("/cart/add")
-    public String addToCart(@AuthenticationPrincipal UserDetails userDetails,
-                            @RequestParam("productId") String productId,
-                            @RequestParam(value = "quantity", defaultValue = "1") int quantity,
-                            Model model) {
-        ShoppingCart cart = cartService.addToCart(userDetails.getUsername(), productId, quantity);
-        model.addAttribute("cart", cart);
-        return "fragments/cart-drawer :: cart-drawer-content";
-    }
-
-    @PostMapping("/cart/update")
-    public String updateCartItem(@AuthenticationPrincipal UserDetails userDetails,
-                                 @RequestParam("productId") String productId,
-                                 @RequestParam("delta") int delta,
-                                 Model model) {
-        ShoppingCart cart = cartService.updateItemQuantity(userDetails.getUsername(), productId, delta);
-        model.addAttribute("cart", cart);
-        return "fragments/cart-drawer :: cart-drawer-content";
-    }
-
-    @PostMapping("/cart/remove")
-    public String removeCartItem(@AuthenticationPrincipal UserDetails userDetails,
-                                 @RequestParam("productId") String productId,
-                                 Model model) {
-        ShoppingCart cart = cartService.removeItem(userDetails.getUsername(), productId);
-        model.addAttribute("cart", cart);
-        return "fragments/cart-drawer :: cart-drawer-content";
-    }
-
-    @PostMapping("/cart/checkout")
-    public String checkoutOrder(@AuthenticationPrincipal UserDetails userDetails,
-                                @RequestParam("buyerName") String name,
-                                @RequestParam("phone") String phone,
-                                @RequestParam("address") String address,
-                                @RequestParam(value = "paymentMethod", defaultValue = "DIRECT_INVOICE") String paymentMethod) {
-        cartService.checkoutOrder(userDetails.getUsername(), name, phone, address, paymentMethod);
-        return "redirect:/messages";
-    }
-
-    @PostMapping("/products/post")
-    public String postProduct(@AuthenticationPrincipal UserDetails userDetails,
-                              @ModelAttribute MarketplaceProduct product,
-                              @RequestParam(value = "images", required = false) List<MultipartFile> images) {
-        marketplaceService.createProduct(userDetails.getUsername(), product, images);
-        return "redirect:/marketplace?tab=shop&posted=true";
-    }
+    // --- Vehicle Rental Endpoints ---
 
     @PostMapping("/vehicles/post")
     public String postVehicle(@AuthenticationPrincipal UserDetails userDetails,
@@ -116,6 +73,8 @@ public class MarketplaceController {
         marketplaceService.bookVehicle(userDetails.getUsername(), listingId, startDate, endDate, phone, license);
         return "redirect:/messages";
     }
+
+    // --- Insurance Policy & Quote Endpoints ---
 
     @PostMapping("/insurance/post")
     public String postInsuranceAd(@AuthenticationPrincipal UserDetails userDetails,
@@ -138,23 +97,16 @@ public class MarketplaceController {
         return "redirect:/messages";
     }
 
+    // --- Admin Moderation Endpoints ---
+
     @GetMapping("/admin/moderation")
     @PreAuthorize("hasRole('ADMIN')")
     public String viewAdminModeration(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         model.addAttribute("currentUser", userService.getUserByUsername(userDetails.getUsername()));
-        model.addAttribute("pendingProducts", marketplaceService.getPendingProducts());
         model.addAttribute("pendingVehicles", marketplaceService.getPendingVehicles());
         model.addAttribute("pendingAds", marketplaceService.getPendingInsuranceAds());
+        model.addAttribute("pendingProducts", productServiceItemService.getPendingItems());
         return "admin-moderation";
-    }
-
-    @PostMapping("/admin/products/{id}/moderate")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String moderateProduct(@PathVariable("id") String id,
-                                  @RequestParam("approve") boolean approve,
-                                  @RequestParam(value = "rejectionReason", required = false) String reason) {
-        marketplaceService.moderateProduct(id, approve, reason);
-        return "redirect:/marketplace/admin/moderation";
     }
 
     @PostMapping("/admin/vehicles/{id}/moderate")

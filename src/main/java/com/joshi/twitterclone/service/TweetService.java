@@ -1,14 +1,13 @@
 package com.joshi.twitterclone.service;
 
-import com.joshi.twitterclone.dto.ThreadViewDto;
-import com.joshi.twitterclone.dto.TrendingTopicDto;
+import com.joshi.twitterclone.dto.ThreadDto;
+import com.joshi.twitterclone.dto.TrendDto;
 import com.joshi.twitterclone.model.MediaStatus;
 import com.joshi.twitterclone.model.Tweet;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.repository.TweetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,89 +29,87 @@ public class TweetService {
     private final UserService userService;
     private final FileStorageService fileStorageService;
 
-    public List<Tweet> getAllTweets() {
+    public List<Tweet> getRecentTweets() {
         return tweetRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
-    }
-
-    public List<Tweet> getTweetsByAuthors(Set<String> authorUsernames) {
-        if (authorUsernames == null || authorUsernames.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return tweetRepository.findByAuthorUsernameInOrderByCreatedAtDesc(authorUsernames);
-    }
-
-    public Tweet getTweetById(String tweetId) {
-        return tweetRepository.findById(tweetId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tweet not found: " + tweetId));
-    }
-
-    public ThreadViewDto getThread(String tweetId) {
-        Tweet mainTweet = getTweetById(tweetId);
-        List<Tweet> replies = tweetRepository.findByParentTweetIdOrderByCreatedAtAsc(tweetId);
-        return ThreadViewDto.builder()
-                .mainTweet(mainTweet)
-                .replies(replies != null ? replies : new ArrayList<>())
-                .build();
     }
 
     public Tweet createTweet(String username, String content, MultipartFile image) {
         User user = userService.getUserByUsername(username);
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + username);
-        }
 
         Tweet tweet = new Tweet();
         tweet.setAuthorId(user.getId());
         tweet.setAuthorUsername(user.getUsername());
         tweet.setAuthorDisplayName(user.getDisplayName());
-        tweet.setAuthorAvatarUrl(user.getAvatarUrl());
-        tweet.setContent(content != null ? content.trim() : "");
-        tweet.setCreatedAt(LocalDateTime.now());
+        tweet.setContent(content);
         tweet.setLikesCount(0);
         tweet.setRepliesCount(0);
         tweet.setLikedByUsernames(new HashSet<>());
-        tweet.setMediaStatus(MediaStatus.NONE);
+        tweet.setCreatedAt(LocalDateTime.now());
 
         if (image != null && !image.isEmpty()) {
             String mediaUrl = fileStorageService.saveImageOptimized(image);
-            tweet.setImageUrl(mediaUrl);
+            tweet.setMediaUrl(mediaUrl);
             tweet.setMediaStatus(MediaStatus.READY);
+        } else {
+            tweet.setMediaStatus(MediaStatus.NONE);
         }
 
         return tweetRepository.save(tweet);
     }
 
-    public Tweet createReply(String username, String parentTweetId, String content) {
-        User user = userService.getUserByUsername(username);
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + username);
-        }
+    public Tweet replyToTweet(String username, String parentTweetId, String content, MultipartFile image) {
+        Tweet parent = tweetRepository.findById(parentTweetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent post not found"));
 
-        Tweet parentTweet = getTweetById(parentTweetId);
+        User user = userService.getUserByUsername(username);
 
         Tweet reply = new Tweet();
         reply.setAuthorId(user.getId());
         reply.setAuthorUsername(user.getUsername());
         reply.setAuthorDisplayName(user.getDisplayName());
-        reply.setAuthorAvatarUrl(user.getAvatarUrl());
         reply.setParentTweetId(parentTweetId);
-        reply.setContent(content != null ? content.trim() : "");
-        reply.setCreatedAt(LocalDateTime.now());
+        reply.setContent(content);
         reply.setLikesCount(0);
         reply.setRepliesCount(0);
         reply.setLikedByUsernames(new HashSet<>());
-        reply.setMediaStatus(MediaStatus.NONE);
+        reply.setCreatedAt(LocalDateTime.now());
+
+        if (image != null && !image.isEmpty()) {
+            String mediaUrl = fileStorageService.saveImageOptimized(image);
+            reply.setMediaUrl(mediaUrl);
+            reply.setMediaStatus(MediaStatus.READY);
+        } else {
+            reply.setMediaStatus(MediaStatus.NONE);
+        }
 
         Tweet savedReply = tweetRepository.save(reply);
 
-        parentTweet.setRepliesCount(parentTweet.getRepliesCount() + 1);
-        tweetRepository.save(parentTweet);
+        parent.setRepliesCount(parent.getRepliesCount() + 1);
+        tweetRepository.save(parent);
 
         return savedReply;
     }
 
+    public ThreadDto getThread(String tweetId, String currentUsername) {
+        Tweet mainTweet = tweetRepository.findById(tweetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+
+        List<Tweet> replies = tweetRepository.findByParentTweetIdOrderByCreatedAtAsc(tweetId);
+
+        return ThreadDto.builder()
+                .mainTweet(mainTweet)
+                .replies(replies != null ? replies : Collections.emptyList())
+                .build();
+    }
+
+    public ThreadDto getThread(String tweetId) {
+        return getThread(tweetId, null);
+    }
+
     public Tweet toggleLike(String tweetId, String username) {
-        Tweet tweet = getTweetById(tweetId);
+        Tweet tweet = tweetRepository.findById(tweetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+
         if (tweet.getLikedByUsernames() == null) {
             tweet.setLikedByUsernames(new HashSet<>());
         }
@@ -125,29 +125,25 @@ public class TweetService {
         return tweetRepository.save(tweet);
     }
 
-    public List<Tweet> searchTweets(String query, int page, int size) {
-        if (query == null || query.isBlank()) {
-            return Collections.emptyList();
-        }
-        PageRequest pageRequest = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(Sort.Direction.DESC, "createdAt"));
-        return tweetRepository.searchByContentRegex(query.trim(), pageRequest).getContent();
-    }
+    public List<TrendDto> getTrendingHashtags() {
+        Map<String, Integer> counts = new HashMap<>();
+        Pattern pattern = Pattern.compile("#(\\w+)");
 
-    public List<Tweet> getTweetsByHashtag(String hashtag, int page, int size) {
-        if (hashtag == null || hashtag.isBlank()) {
-            return Collections.emptyList();
+        List<Tweet> recent = getRecentTweets();
+        for (Tweet t : recent) {
+            if (t.getContent() != null) {
+                Matcher matcher = pattern.matcher(t.getContent());
+                while (matcher.find()) {
+                    String tag = matcher.group(1).toLowerCase();
+                    counts.put(tag, counts.getOrDefault(tag, 0) + 1);
+                }
+            }
         }
-        String cleanTag = hashtag.startsWith("#") ? hashtag : "#" + hashtag;
-        return searchTweets(cleanTag, page, size);
-    }
 
-    public List<TrendingTopicDto> getTrendingHashtags() {
-        return List.of(
-                new TrendingTopicDto("BUSINESS", "ASMJBizConnect", 1420),
-                new TrendingTopicDto("TECHNOLOGY", "SpringBoot3", 890),
-                new TrendingTopicDto("COMMERCE", "AdMarketplace", 530),
-                new TrendingTopicDto("CLOUD STORAGE", "Cloudinary", 310),
-                new TrendingTopicDto("GLOBAL", "Innovation", 240)
-        );
+        return counts.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .limit(5)
+                .map(e -> new TrendDto(e.getKey(), e.getValue(), "Trending"))
+                .collect(Collectors.toList());
     }
 }

@@ -33,35 +33,11 @@ public class User {
     private String website;
 
     private Set<String> roles = new HashSet<>();
-    private Set<String> followingUsernames = new HashSet<>();
-    private Set<String> followerUsernames = new HashSet<>();
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public String getJoinedDateFormatted() {
         if (createdAt == null) return "Joined Recently";
         return "Joined " + createdAt.format(DateTimeFormatter.ofPattern("MMMM yyyy"));
-    }
-
-    public Set<String> getFollowing() {
-        if (this.followingUsernames == null) {
-            this.followingUsernames = new HashSet<>();
-        }
-        return this.followingUsernames;
-    }
-
-    public void setFollowing(Set<String> following) {
-        this.followingUsernames = following;
-    }
-
-    public Set<String> getFollowers() {
-        if (this.followerUsernames == null) {
-            this.followerUsernames = new HashSet<>();
-        }
-        return this.followerUsernames;
-    }
-
-    public void setFollowers(Set<String> followers) {
-        this.followerUsernames = followers;
     }
 }

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Management & Bookings / ASMJ Biz Connect</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <div>
+                <h1 class="text-xl font-bold text-white">Event Organizer & Booking Manager</h1>
+                <p class="text-xs text-zinc-500">Track attendee registrations, revenue, and organized summits</p>
+            </div>
+            <a th:href="@{/events}" class="text-xs text-sky-400 hover:underline">&larr; Back to Events Hub</a>
+        </div>
+
+        <!-- 1. Registered Attendee Bookings -->
+        <section class="space-y-4">
+            <h2 class="text-sm font-bold text-white">Attendee Registrations (<span th:text="${#lists.size(attendeeBookings)}">0</span>)</h2>
+
+            <div th:if="${#lists.isEmpty(attendeeBookings)}" class="p-8 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                No tickets purchased for your events yet.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:each="b : ${attendeeBookings}" class="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-sm text-white" th:text="${b.attendeeFullName}">Attendee</h3>
+                            <span class="text-xs text-zinc-400" th:text="|Event: ${b.eventTitle}|">Event</span>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" th:text="${b.status}">CONFIRMED</span>
+                    </div>
+                    <div class="text-xs text-zinc-400 space-y-0.5">
+                        <p th:text="|Ref: ${b.bookingReference} · Passes: ${b.numberOfTickets}|">Ref</p>
+                        <p th:text="|📧 ${b.attendeeEmail} · 📞 ${b.attendeePhone}|">Contact</p>
+                        <p class="text-[11px] text-zinc-500" th:text="|Booked: ${b.formattedBookedAt}|">Date</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. My Hosted Events -->
+        <section class="space-y-4">
+            <h2 class="text-sm font-bold text-white">My Hosted Events (<span th:text="${#lists.size(organizedEvents)}">0</span>)</h2>
+
+            <div th:if="${#lists.isEmpty(organizedEvents)}" class="p-8 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                You have not created any events yet.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:each="evt : ${organizedEvents}" class="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-sm text-white" th:text="${evt.title}">Event Title</h3>
+                        <span class="text-xs font-bold text-emerald-400" th:text="${evt.ticketPrice == 0 || evt.ticketPrice == null} ? 'Free' : |₹${evt.ticketPrice}|">Free</span>
+                    </div>
+                    <p class="text-xs text-zinc-400" th:text="|Date: ${evt.formattedDate} · City: ${evt.city}|">Details</p>
+                    <div class="flex justify-between items-center pt-2 border-t border-zinc-800 text-xs text-zinc-500">
+                        <span th:text="|Seats: ${evt.bookedSeats} / ${evt.totalCapacity} booked|">Capacity</span>
+                        <span class="text-sky-400 font-semibold" th:text="${evt.status}">APPROVED</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+</html>
