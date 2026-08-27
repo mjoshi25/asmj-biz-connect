@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard / ASMJ Biz Connect</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Top Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-white">Vendor Operations Dashboard</h1>
+                <p class="text-xs text-zinc-500">Track moderation approval states, pricing tiers, and direct inquiries</p>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <a th:href="@{/products-services}" class="text-xs text-sky-400 hover:underline">&larr; Back to Catalog</a>
+                <button type="button" 
+                        onclick="document.getElementById('post-item-modal').classList.remove('hidden')"
+                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-md shadow-blue-500/20 active:scale-95">
+                    + Add New Item
+                </button>
+            </div>
+        </div>
+
+        <!-- Vendor Summary Cards -->
+        <div class="grid grid-cols-3 gap-4">
+            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Live & Approved</span>
+                <p class="text-2xl font-black text-emerald-400" th:text="${approvedCount}">0</p>
+            </div>
+            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Under Admin Review</span>
+                <p class="text-2xl font-black text-amber-400" th:text="${pendingCount}">0</p>
+            </div>
+            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Rejected</span>
+                <p class="text-2xl font-black text-rose-400" th:text="${rejectedCount}">0</p>
+            </div>
+        </div>
+
+        <!-- My Listings Feed -->
+        <div class="space-y-4">
+            <h2 class="text-sm font-bold text-white">My Posted Products & Services (<span th:text="${#lists.size(myListings)}">0</span>)</h2>
+
+            <div th:if="${#lists.isEmpty(myListings)}" class="p-12 text-center text-zinc-500 text-xs border border-zinc-900 rounded-3xl bg-zinc-950/40">
+                You haven't posted any products or services yet. Click <strong>+ Add New Item</strong> to get started!
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:each="item : ${myListings}" class="p-5 bg-zinc-900/80 border border-zinc-800 rounded-2xl space-y-3 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded uppercase" th:text="${item.category}">Category</span>
+                                <h3 class="font-bold text-sm text-white mt-1" th:text="${item.title}">Title</h3>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                  th:classappend="${item.status.name() == 'APPROVED'} ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : (${item.status.name() == 'PENDING_APPROVAL'} ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30')"
+                                  th:text="${item.status}">STATUS</span>
+                        </div>
+
+                        <p class="text-xs text-zinc-300 line-clamp-2 mt-2" th:text="${item.description}">Description</p>
+                        
+                        <div th:if="${item.rejectionReason != null && !item.rejectionReason.isEmpty()}" class="mt-2 p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[11px] text-rose-300">
+                            <strong>Reason for rejection:</strong> <span th:text="${item.rejectionReason}">Reason text</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-3 border-t border-zinc-800 text-xs text-zinc-400">
+                        <span class="font-bold text-emerald-400" th:text="|₹${item.price} ${item.priceUnit != null ? item.priceUnit : ''}|">Price</span>
+                        <span class="text-zinc-500" th:text="|Submitted: ${item.formattedDate}|">Date</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL: Post Item -->
+    <div id="post-item-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <h3 class="font-bold text-sm text-white">Create Product or Service Listing</h3>
+                <button type="button" onclick="document.getElementById('post-item-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white">&times;</button>
+            </div>
+
+            <form th:action="@{/products-services/post}" method="post" enctype="multipart/form-data" class="space-y-3 text-xs">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <input type="text" name="title" placeholder="Title" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" name="businessName" placeholder="Business / Organization Name" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    <select name="category" class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white">
+                        <option value="PRODUCT_PHYSICAL">Physical Product</option>
+                        <option value="PRODUCT_DIGITAL">Digital Product</option>
+                        <option value="SERVICE_CONSULTING">Consulting</option>
+                        <option value="SERVICE_TECHNICAL">IT / Technical</option>
+                        <option value="SERVICE_MAINTENANCE">Maintenance</option>
+                        <option value="SERVICE_LOGISTICS">Logistics</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" step="0.01" name="price" placeholder="Price (₹)" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    <input type="text" name="priceUnit" placeholder="Unit (e.g. /hr, /month)" class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" name="locationCity" placeholder="City" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    <input type="text" name="contactNumber" placeholder="Contact Mobile" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                </div>
+
+                <textarea name="description" rows="3" placeholder="Specifications, scope, and deliverables..." required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white resize-none"></textarea>
+
+                <div>
+                    <label class="block text-zinc-400 mb-1">Upload Media</label>
+                    <input type="file" name="images" multiple accept="image/*" class="w-full text-zinc-400 file:bg-zinc-800 file:text-white file:border-0 file:rounded-lg file:p-2 file:text-xs" />
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 font-bold text-white py-2.5 rounded-xl transition shadow-md active:scale-95">Submit For Review</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

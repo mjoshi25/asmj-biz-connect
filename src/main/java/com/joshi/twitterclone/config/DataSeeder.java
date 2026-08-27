@@ -73,9 +73,6 @@ public class DataSeeder implements CommandLineRunner {
         log.info("All domain seeders executed successfully.");
     }
 
-    // ==========================================
-    // 1. USERS
-    // ==========================================
     private void seedUsers() {
         createAccountIfMissing("admin", "ASMJ Administrator", "admin@asmjbizconnect.com", 
                 "Official platform administrator & marketplace review moderator.", "Bengaluru, India", Set.of("ROLE_USER", "ROLE_ADMIN"));
@@ -96,9 +93,6 @@ public class DataSeeder implements CommandLineRunner {
                 "Managing Director at Malhotra Mobility Solutions. Commercial EV & SUV fleet partner.", "Pune, India", Set.of("ROLE_USER"));
     }
 
-    // ==========================================
-    // 2. TIMELINE POSTS
-    // ==========================================
     private void seedTweets() {
         if (tweetRepository.count() == 0) {
             log.info("Seeding timeline posts...");
@@ -120,9 +114,6 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    // ==========================================
-    // 3. DIRECT MESSAGING & CONVERSATIONS
-    // ==========================================
     private void seedConversations() {
         if (conversationRepository.count() == 0) {
             log.info("Seeding active conversations and messages...");
@@ -168,11 +159,8 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    // ==========================================
-    // 4. VEHICLE RENTALS & BOOKINGS (6-8 Items)
-    // ==========================================
     private void seedVehicleRentals() {
-        if (vehicleListingRepository.count() == 0) {
+        if (vehicleListingRepository.count() == 0 || vehicleListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED).isEmpty()) {
             log.info("Seeding rental vehicle marketplace listings...");
 
             VehicleListing v1 = VehicleListing.builder()
@@ -324,31 +312,29 @@ public class DataSeeder implements CommandLineRunner {
 
             vehicleListingRepository.saveAll(List.of(v1, v2, v3, v4, v5, v6, v7Pending));
 
-            // Seed sample vehicle booking
-            VehicleBooking booking = VehicleBooking.builder()
-                    .listingId(v1.getId())
-                    .vehicleSummary("2024 Hyundai Creta SX (O) Turbo")
-                    .renterUsername("john_doe")
-                    .ownerUsername("alex_tech")
-                    .startDate(LocalDate.now().plusDays(2))
-                    .endDate(LocalDate.now().plusDays(5))
-                    .totalDays(3)
-                    .totalAmount(BigDecimal.valueOf(8400.00))
-                    .customerPhone("+91 9811223344")
-                    .drivingLicenseNumber("DL-1420210098765")
-                    .bookingStatus("CONFIRMED")
-                    .bookedAt(LocalDateTime.now().minusHours(5))
-                    .build();
+            if (vehicleBookingRepository.count() == 0) {
+                VehicleBooking booking = VehicleBooking.builder()
+                        .listingId(v1.getId())
+                        .vehicleSummary("2024 Hyundai Creta SX (O) Turbo")
+                        .renterUsername("john_doe")
+                        .ownerUsername("alex_tech")
+                        .startDate(LocalDate.now().plusDays(2))
+                        .endDate(LocalDate.now().plusDays(5))
+                        .totalDays(3)
+                        .totalAmount(BigDecimal.valueOf(8400.00))
+                        .customerPhone("+91 9811223344")
+                        .drivingLicenseNumber("DL-1420210098765")
+                        .bookingStatus("CONFIRMED")
+                        .bookedAt(LocalDateTime.now().minusHours(5))
+                        .build();
 
-            vehicleBookingRepository.save(booking);
+                vehicleBookingRepository.save(booking);
+            }
         }
     }
 
-    // ==========================================
-    // 5. INSURANCE CATALOG & QUOTES (6-7 Items)
-    // ==========================================
     private void seedInsuranceCatalog() {
-        if (insuranceAdRepository.count() == 0) {
+        if (insuranceAdRepository.count() == 0 || insuranceAdRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED).isEmpty()) {
             log.info("Seeding insurance advertisement catalog...");
 
             InsuranceAd ad1 = InsuranceAd.builder()
@@ -437,31 +423,29 @@ public class DataSeeder implements CommandLineRunner {
 
             insuranceAdRepository.saveAll(List.of(ad1, ad2, ad3, ad4, ad5, ad6Pending));
 
-            // Seed sample quote
-            InsuranceQuote quote = InsuranceQuote.builder()
-                    .adId(ad1.getId())
-                    .adTitle(ad1.getTitle())
-                    .insurerUsername("sarah_designs")
-                    .applicantUsername("john_doe")
-                    .applicantName("John Doe")
-                    .applicantEmail("john@doelogistics.com")
-                    .applicantPhone("+91 9811223344")
-                    .applicantAge(35)
-                    .estimatedValueOrSumInsured(BigDecimal.valueOf(1400000.00))
-                    .calculatedQuotePremium(BigDecimal.valueOf(49000.00))
-                    .status("GENERATED")
-                    .requestedAt(LocalDateTime.now().minusHours(4))
-                    .build();
+            if (insuranceQuoteRepository.count() == 0) {
+                InsuranceQuote quote = InsuranceQuote.builder()
+                        .adId(ad1.getId())
+                        .adTitle(ad1.getTitle())
+                        .insurerUsername("sarah_designs")
+                        .applicantUsername("john_doe")
+                        .applicantName("John Doe")
+                        .applicantEmail("john@doelogistics.com")
+                        .applicantPhone("+91 9811223344")
+                        .applicantAge(35)
+                        .estimatedValueOrSumInsured(BigDecimal.valueOf(1400000.00))
+                        .calculatedQuotePremium(BigDecimal.valueOf(49000.00))
+                        .status("GENERATED")
+                        .requestedAt(LocalDateTime.now().minusHours(4))
+                        .build();
 
-            insuranceQuoteRepository.save(quote);
+                insuranceQuoteRepository.save(quote);
+            }
         }
     }
 
-    // ==========================================
-    // 6. PRODUCTS & SERVICES (6-8 Items)
-    // ==========================================
     private void seedProductsAndServices() {
-        if (productServiceRepository.count() == 0) {
+        if (productServiceRepository.count() == 0 || productServiceRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED).isEmpty()) {
             log.info("Seeding products & services catalog...");
 
             ProductServiceItem p1 = ProductServiceItem.builder()
@@ -570,11 +554,8 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    // ==========================================
-    // 7. JOBS & RECRUITMENT (6-7 Items)
-    // ==========================================
     private void seedJobListingsAndApplications() {
-        if (jobListingRepository.count() == 0) {
+        if (jobListingRepository.count() == 0 || jobListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED).isEmpty()) {
             log.info("Seeding career opportunities and job applications...");
 
             JobListing j1 = JobListing.builder()
@@ -693,31 +674,29 @@ public class DataSeeder implements CommandLineRunner {
 
             jobListingRepository.saveAll(List.of(j1, j2, j3, j4, j5, j6));
 
-            // Seed sample application
-            JobApplication app = JobApplication.builder()
-                    .jobId(j1.getId())
-                    .jobTitle(j1.getJobTitle())
-                    .companyName(j1.getCompanyName())
-                    .posterUsername(j1.getPosterUsername())
-                    .applicantUsername("john_doe")
-                    .applicantFullName("John Doe")
-                    .applicantEmail("john@doelogistics.com")
-                    .applicantPhone("+91 9811223344")
-                    .yearsOfExperience(6)
-                    .coverLetterNote("I have over 6 years of experience building high-throughput Spring Boot backends and managing distributed databases.")
-                    .status(ApplicationStatus.SHORTLISTED)
-                    .appliedAt(LocalDateTime.now().minusHours(6))
-                    .build();
+            if (jobApplicationRepository.count() == 0) {
+                JobApplication app = JobApplication.builder()
+                        .jobId(j1.getId())
+                        .jobTitle(j1.getJobTitle())
+                        .companyName(j1.getCompanyName())
+                        .posterUsername(j1.getPosterUsername())
+                        .applicantUsername("john_doe")
+                        .applicantFullName("John Doe")
+                        .applicantEmail("john@doelogistics.com")
+                        .applicantPhone("+91 9811223344")
+                        .yearsOfExperience(6)
+                        .coverLetterNote("I have over 6 years of experience building high-throughput Spring Boot backends and managing distributed databases.")
+                        .status(ApplicationStatus.SHORTLISTED)
+                        .appliedAt(LocalDateTime.now().minusHours(6))
+                        .build();
 
-            jobApplicationRepository.save(app);
+                jobApplicationRepository.save(app);
+            }
         }
     }
 
-    // ==========================================
-    // 8. UPCOMING EVENTS & BOOKINGS (6 Items)
-    // ==========================================
     private void seedEventsAndBookings() {
-        if (eventListingRepository.count() == 0) {
+        if (eventListingRepository.count() == 0 || eventListingRepository.findByStatusAndEventDateGreaterThanEqualOrderByEventDateAsc(ListingStatus.APPROVED, LocalDate.now()).isEmpty()) {
             log.info("Seeding corporate events catalog and reservations...");
 
             EventListing e1 = EventListing.builder()
@@ -827,31 +806,30 @@ public class DataSeeder implements CommandLineRunner {
 
             eventListingRepository.saveAll(List.of(e1, e2, e3, e4, e5));
 
-            // Seed sample event booking
-            EventBooking booking = EventBooking.builder()
-                    .eventId(e1.getId())
-                    .eventTitle(e1.getTitle())
-                    .organizerUsername(e1.getOrganizerUsername())
-                    .attendeeUsername("john_doe")
-                    .attendeeFullName("John Doe")
-                    .attendeeEmail("john@doelogistics.com")
-                    .attendeePhone("+91 9811223344")
-                    .numberOfTickets(1)
-                    .totalAmount(BigDecimal.valueOf(999.00))
-                    .bookingReference("ASMJ-EVT-9A24C1")
-                    .status(EventBookingStatus.CONFIRMED)
-                    .bookedAt(LocalDateTime.now().minusHours(3))
-                    .build();
+            if (eventBookingRepository.count() == 0) {
+                EventBooking booking = EventBooking.builder()
+                        .eventId(e1.getId())
+                        .eventTitle(e1.getTitle())
+                        .organizerUsername(e1.getOrganizerUsername())
+                        .attendeeUsername("john_doe")
+                        .attendeeFullName("John Doe")
+                        .attendeeEmail("john@doelogistics.com")
+                        .attendeePhone("+91 9811223344")
+                        .numberOfTickets(1)
+                        .totalAmount(BigDecimal.valueOf(999.00))
+                        .bookingReference("ASMJ-EVT-9A24C1")
+                        .status(EventBookingStatus.CONFIRMED)
+                        .bookedAt(LocalDateTime.now().minusHours(3))
+                        .build();
 
-            eventBookingRepository.save(booking);
+                eventBookingRepository.save(booking);
+            }
         }
     }
 
-    // ==========================================
-    // HELPER METHODS
-    // ==========================================
     private void createAccountIfMissing(String username, String displayName, String email, String bio, String location, Set<String> roles) {
-        if (userRepository.findByUsername(username).isEmpty()) {
+        var existingUserOpt = userRepository.findByUsername(username);
+        if (existingUserOpt.isEmpty()) {
             User user = new User();
             user.setUsername(username);
             user.setDisplayName(displayName);
@@ -863,6 +841,16 @@ public class DataSeeder implements CommandLineRunner {
             user.setCreatedAt(LocalDateTime.now().minusMonths(3));
             userRepository.save(user);
             log.info("Created user account: @{}", username);
+        } else {
+            User existingUser = existingUserOpt.get();
+            if (existingUser.getRoles() == null || !existingUser.getRoles().containsAll(roles)) {
+                if (existingUser.getRoles() == null) {
+                    existingUser.setRoles(new HashSet<>());
+                }
+                existingUser.getRoles().addAll(roles);
+                userRepository.save(existingUser);
+                log.info("Updated role authorities for user: @{} -> {}", username, existingUser.getRoles());
+            }
         }
     }
 

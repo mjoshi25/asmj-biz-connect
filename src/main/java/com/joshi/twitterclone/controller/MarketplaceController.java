@@ -3,6 +3,8 @@ package com.joshi.twitterclone.controller;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.marketplace.InsuranceAd;
 import com.joshi.twitterclone.model.marketplace.VehicleListing;
+import com.joshi.twitterclone.model.products.ItemCategory;
+import com.joshi.twitterclone.model.products.ProductServiceItem;
 import com.joshi.twitterclone.service.EventService;
 import com.joshi.twitterclone.service.MarketplaceService;
 import com.joshi.twitterclone.service.ProductServiceItemService;
@@ -34,23 +36,42 @@ public class MarketplaceController {
 
     @GetMapping
     public String viewMarketplace(@AuthenticationPrincipal UserDetails userDetails,
-                                  @RequestParam(value = "tab", defaultValue = "vehicles") String tab,
+                                  @RequestParam(value = "tab", defaultValue = "products") String tab,
+                                  @RequestParam(value = "category", required = false) ItemCategory category,
                                   @RequestParam(value = "city", required = false) String city,
                                   Model model) {
         String username = userDetails != null ? userDetails.getUsername() : "";
         User currentUser = userService.getUserByUsername(username);
 
+        List<ProductServiceItem> products = productServiceItemService.getApprovedItems(category, city);
         List<VehicleListing> vehicles = marketplaceService.getApprovedVehicles(city);
         List<InsuranceAd> insuranceAds = marketplaceService.getApprovedInsuranceAds();
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("activeTab", tab != null ? tab.trim().toLowerCase() : "vehicles");
+        model.addAttribute("activeTab", tab != null ? tab.trim().toLowerCase() : "products");
+        model.addAttribute("products", products != null ? products : Collections.emptyList());
         model.addAttribute("vehicles", vehicles != null ? vehicles : Collections.emptyList());
         model.addAttribute("insuranceAds", insuranceAds != null ? insuranceAds : Collections.emptyList());
+        model.addAttribute("selectedCategory", category);
         model.addAttribute("selectedCity", city != null ? city : "");
         model.addAttribute("upcomingEvents", eventService.getTopUpcomingEvents(3));
 
         return "marketplace";
+    }
+
+    @GetMapping("/manage")
+    public String manageMarketplaceVendorPortal() {
+        return "redirect:/products-services/manage";
+    }
+
+    // --- Product & Service Posting from Marketplace Tab ---
+
+    @PostMapping("/products/post")
+    public String postProductService(@AuthenticationPrincipal UserDetails userDetails,
+                                     @ModelAttribute ProductServiceItem item,
+                                     @RequestParam(value = "images", required = false) List<MultipartFile> images) {
+        productServiceItemService.createListing(userDetails.getUsername(), item, images);
+        return "redirect:/marketplace?tab=products&posted=true";
     }
 
     // --- Vehicle Rental Endpoints ---
@@ -115,7 +136,7 @@ public class MarketplaceController {
                                   @RequestParam("approve") boolean approve,
                                   @RequestParam(value = "rejectionReason", required = false) String reason) {
         marketplaceService.moderateVehicle(id, approve, reason);
-        return "redirect:/marketplace/admin/moderation";
+        return "redirect:/admin/analytics";
     }
 
     @PostMapping("/admin/insurance/{id}/moderate")
@@ -124,6 +145,6 @@ public class MarketplaceController {
                                     @RequestParam("approve") boolean approve,
                                     @RequestParam(value = "rejectionReason", required = false) String reason) {
         marketplaceService.moderateInsuranceAd(id, approve, reason);
-        return "redirect:/marketplace/admin/moderation";
+        return "redirect:/admin/analytics";
     }
 }

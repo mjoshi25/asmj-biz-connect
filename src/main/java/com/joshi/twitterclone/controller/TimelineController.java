@@ -42,8 +42,27 @@ public class TimelineController {
     @PostMapping("/tweets")
     public String createTweet(@AuthenticationPrincipal UserDetails userDetails,
                               @RequestParam("content") String content,
-                              @RequestParam(value = "image", required = false) MultipartFile image) {
+                              @RequestParam(value = "image", required = false) MultipartFile image,
+                              @RequestHeader(value = "HX-Request", required = false) String hxRequest,
+                              Model model) {
         tweetService.createTweet(userDetails.getUsername(), content, image);
+
+        if ("true".equalsIgnoreCase(hxRequest)) {
+            model.addAttribute("currentUser", userService.getUserByUsername(userDetails.getUsername()));
+            model.addAttribute("tweets", tweetService.getRecentTweets());
+            return "fragments/tweet-feed :: tweet-list";
+        }
+
         return "redirect:/home";
+    }
+
+    @GetMapping("/feed-fragment")
+    public String getFeedFragment(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        if (username != null) {
+            model.addAttribute("currentUser", userService.getUserByUsername(username));
+        }
+        model.addAttribute("tweets", tweetService.getRecentTweets());
+        return "fragments/tweet-feed :: tweet-list";
     }
 }

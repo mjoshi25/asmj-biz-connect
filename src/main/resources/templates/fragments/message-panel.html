@@ -4,32 +4,50 @@
 
 <div th:fragment="chat-window" id="chat-window-container" class="flex-1 flex flex-col h-full bg-[#080c14] min-w-0">
     
-    <!-- Chat Header -->
+    <!-- Chat Header with Group Info & Exit Trigger -->
     <div class="h-14 md:h-16 px-4 md:px-6 border-b border-zinc-800/80 flex items-center justify-between bg-[#080c14]/80 backdrop-blur-md sticky top-0 z-10">
         <div class="flex items-center space-x-3 min-w-0" th:if="${activeConversation != null}">
-            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs sm:text-sm shrink-0 shadow-sm">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-xs sm:text-sm shrink-0 shadow-sm"
+                 th:classappend="${activeConversation.isGroup} ? 'bg-gradient-to-tr from-indigo-500 to-purple-600' : 'bg-gradient-to-tr from-sky-500 to-indigo-600'">
                 <span th:text="${activeConversation.name != null && !activeConversation.name.isEmpty() ? activeConversation.name.substring(0, 1).toUpperCase() : 'C'}">C</span>
             </div>
             <div class="flex flex-col min-w-0">
                 <span class="font-bold text-xs sm:text-sm text-white truncate" th:text="${activeConversation.name != null ? activeConversation.name : 'Conversation'}">Chat</span>
                 <span class="text-[10px] sm:text-[11px] text-zinc-500 flex items-center space-x-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    <span th:text="${activeConversation.isGroup} ? |${activeConversation.participantUsernames.size()} members| : 'Active now'">Status</span>
+                    <span class="w-1.5 h-1.5 rounded-full" th:classappend="${activeConversation.isGroup} ? 'bg-purple-400' : 'bg-emerald-500'"></span>
+                    <span th:text="${activeConversation.isGroup} ? |Group · ${activeConversation.participantUsernames.size()} members| : 'Direct Message · Active now'">Status</span>
                 </span>
             </div>
         </div>
 
+        <div th:if="${activeConversation != null and activeConversation.isGroup}">
+            <button type="button" 
+                    onclick="document.getElementById('group-manage-modal').classList.remove('hidden')"
+                    class="px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-semibold transition">
+                Group Info
+            </button>
+        </div>
+
         <div th:unless="${activeConversation != null}" class="text-zinc-500 text-xs py-2">
-            Select a conversation to start chatting
+            Select a conversation to begin chatting
         </div>
     </div>
 
-    <!-- Message Bubble Scroll Area -->
-    <div id="message-feed" class="flex-1 p-3 sm:p-6 overflow-y-auto space-y-3">
+    <!-- Message Feed -->
+    <div id="message-feed" 
+         th:if="${activeConvoId != null}"
+         th:hx-get="|/messages/feed/${activeConvoId}|"
+         hx-trigger="every 3s"
+         hx-swap="innerHTML"
+         class="flex-1 p-3 sm:p-6 overflow-y-auto space-y-3">
         <div th:replace="~{fragments/message-panel :: message-bubble-list}"></div>
     </div>
 
-    <!-- Message Input Bar (Fixed bottom padding for mobile navigation clearance) -->
+    <div th:unless="${activeConvoId != null}" class="flex-1 flex flex-col items-center justify-center text-center text-zinc-500 text-xs p-6">
+        <span>No conversation selected. Choose a chat from the inbox or start a new group.</span>
+    </div>
+
+    <!-- Message Input Bar -->
     <div class="p-3 sm:p-4 border-t border-zinc-800/80 bg-zinc-950/40" th:if="${activeConvoId != null}">
         <form hx-post="/messages/send"
               hx-encoding="multipart/form-data"
@@ -41,7 +59,7 @@
             <input type="hidden" name="conversationId" th:value="${activeConvoId}" />
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 
-            <label class="cursor-pointer text-zinc-400 hover:text-white p-1 transition" title="Attach file">
+            <label class="cursor-pointer text-zinc-400 hover:text-white p-1 transition" title="Attach file or photo">
                 <input type="file" name="file" class="hidden" />
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -51,7 +69,8 @@
             <input type="text" 
                    name="content" 
                    autocomplete="off"
-                   placeholder="Start a message..." 
+                   required
+                   placeholder="Type a message..." 
                    class="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none" />
 
             <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition shadow-md shadow-blue-500/20 active:scale-95">
@@ -66,17 +85,17 @@
 <!-- Message Bubble Fragment -->
 <div th:fragment="message-bubble-list">
     <div th:if="${#lists.isEmpty(messages)}" class="h-full flex flex-col items-center justify-center text-center text-zinc-500 text-xs py-12">
-        <span>No messages yet. Send a greeting to start the conversation!</span>
+        <span>No messages in this chat yet. Send a greeting to start the conversation!</span>
     </div>
 
     <div th:each="msg : ${messages}" 
          class="flex flex-col mb-2.5"
-         th:classappend="${msg.self} ? 'items-end' : 'items-start'">
+         th:classappend="${msg.isSelf} ? 'items-end' : 'items-start'">
         
-        <span th:if="${!msg.self and msg.isGroup}" class="text-[10px] text-zinc-500 mb-1 ml-1" th:text="${msg.senderDisplayName}">Sender</span>
+        <span th:if="${!msg.isSelf and activeConversation != null and activeConversation.isGroup}" class="text-[10px] text-purple-400 mb-0.5 ml-1 font-semibold" th:text="${msg.senderDisplayName}">Sender</span>
 
         <div class="max-w-[82%] sm:max-w-[70%] rounded-2xl px-3.5 py-2 text-xs shadow-sm leading-relaxed"
-             th:classappend="${msg.self} ? 'bg-blue-600 text-white rounded-br-none' : 'bg-zinc-800/90 text-zinc-200 border border-zinc-700/50 rounded-bl-none'">
+             th:classappend="${msg.isSelf} ? 'bg-blue-600 text-white rounded-br-none' : 'bg-zinc-800/90 text-zinc-200 border border-zinc-700/50 rounded-bl-none'">
             
             <p th:if="${msg.content != null && !msg.content.isEmpty()}" th:text="${msg.content}" class="break-words"></p>
 

@@ -4,66 +4,98 @@
 
 <div th:fragment="tweet-list" class="divide-y divide-zinc-800/60">
     
-    <div th:if="${#lists.isEmpty(tweets)}" class="p-12 text-center text-xs text-zinc-500 space-y-2">
-        <svg class="w-10 h-10 mx-auto text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
-        </svg>
-        <p>No posts in your feed yet.</p>
-        <p class="text-[11px] text-zinc-600">Follow colleagues or post an update to see active content!</p>
+    <div th:if="${#lists.isEmpty(tweets)}" class="p-12 text-center text-zinc-500 text-xs">
+        <p class="font-semibold text-zinc-400 text-sm mb-1">No posts yet</p>
+        <p>Publish your first business update or commercial listing using the composer above!</p>
     </div>
 
-    <article th:each="tweet : ${tweets}" class="p-3.5 sm:p-4 hover:bg-zinc-900/30 transition flex space-x-3">
+    <article th:each="tweet : ${tweets}" class="p-4 sm:p-5 hover:bg-zinc-900/30 transition flex space-x-3 group">
         
-        <a th:href="|/u/${tweet.authorUsername}|" class="w-10 h-10 rounded-full bg-blue-600 overflow-hidden flex items-center justify-center font-bold text-white text-xs shrink-0 mt-0.5 shadow-sm">
+        <!-- Author Avatar -->
+        <a th:href="|/u/${tweet.authorUsername}|" class="w-10 h-10 rounded-full bg-blue-600 border border-zinc-700/60 overflow-hidden flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-inner">
             <img th:if="${tweet.authorAvatarUrl != null}" th:src="${tweet.authorAvatarUrl}" class="w-full h-full object-cover" />
-            <span th:unless="${tweet.authorAvatarUrl != null}" th:text="${tweet.authorDisplayName != null && !tweet.authorDisplayName.isEmpty() ? tweet.authorDisplayName.substring(0, 1).toUpperCase() : 'U'}">U</span>
+            <span th:unless="${tweet.authorAvatarUrl != null}" th:text="${tweet.authorDisplayName != null and !tweet.authorDisplayName.isEmpty() ? tweet.authorDisplayName.substring(0, 1).toUpperCase() : 'U'}">U</span>
         </a>
 
-        <div class="flex-1 min-w-0">
-            <div class="flex items-center space-x-1.5 flex-wrap leading-tight">
-                <a th:href="|/u/${tweet.authorUsername}|" class="font-bold text-xs sm:text-sm text-white hover:underline truncate" th:text="${tweet.authorDisplayName}">Author</a>
-                <span class="text-[11px] text-zinc-500 truncate" th:text="|@${tweet.authorUsername}|">@handle</span>
-                <span class="text-zinc-600 text-[10px]">·</span>
-                <span class="text-[11px] text-zinc-500" th:text="${#temporals.format(tweet.createdAt, 'MMM d')}">Date</span>
+        <!-- Content Body -->
+        <div class="flex-1 min-w-0 space-y-2">
+            
+            <div class="flex items-center space-x-1.5 text-xs">
+                <a th:href="|/u/${tweet.authorUsername}|" class="font-bold text-white hover:underline truncate" th:text="${tweet.authorDisplayName}">User Name</a>
+                <span class="text-zinc-500 truncate" th:text="|@${tweet.authorUsername}|">@handle</span>
+                <span class="text-zinc-600">·</span>
+                <span class="text-zinc-500 text-[11px] shrink-0" th:text="${tweet.formattedDate}">Time</span>
             </div>
 
-            <p class="text-xs sm:text-sm text-zinc-200 mt-1.5 break-words whitespace-pre-line leading-relaxed" th:text="${tweet.content}">Content</p>
+            <p class="text-xs sm:text-[13px] text-zinc-200 leading-relaxed break-words whitespace-pre-line" th:text="${tweet.content}">Post text content...</p>
 
-            <div th:if="${tweet.imageUrl != null and !tweet.imageUrl.isEmpty()}" class="mt-2.5 rounded-2xl overflow-hidden border border-zinc-800/80 bg-zinc-950">
-                <img th:src="${tweet.imageUrl}" class="w-full max-h-96 object-cover" loading="lazy" />
+            <!-- Media Image Preview -->
+            <div th:if="${tweet.mediaUrl != null and !tweet.mediaUrl.isEmpty()}" class="rounded-2xl overflow-hidden border border-zinc-800 mt-2 max-h-96 bg-zinc-950">
+                <img th:src="${tweet.mediaUrl}" class="w-full h-full object-cover" loading="lazy" />
             </div>
 
-            <div class="flex items-center justify-between text-zinc-500 text-xs mt-3 max-w-sm">
-                <!-- Reply -->
-                <button type="button" class="flex items-center space-x-1.5 hover:text-sky-400 transition group">
-                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Action Ribbon (Like, Reply, Chat) -->
+            <div class="flex items-center justify-between pt-2 text-zinc-500 text-xs max-w-md">
+                
+                <!-- Like Button -->
+                <button type="button"
+                        th:data-tweet-id="${tweet.id}"
+                        onclick="toggleLikePost(this)"
+                        class="flex items-center space-x-1.5 hover:text-rose-500 transition group/btn">
+                    <svg class="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <span class="like-count font-semibold text-[11px]" th:text="${tweet.likesCount}">0</span>
+                </button>
+
+                <!-- Reply Link -->
+                <a th:href="|/tweets/${tweet.id}|" class="flex items-center space-x-1.5 hover:text-sky-400 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                     </svg>
-                    <span th:text="${tweet.repliesCount}">0</span>
-                </button>
+                    <span class="font-semibold text-[11px]" th:text="${tweet.repliesCount}">0</span>
+                </a>
 
-                <!-- Like (Clean HTMX Trigger) -->
-                <button type="button"
-                        th:hx-post="|/tweets/${tweet.id}/like|"
-                        hx-swap="outerHTML"
-                        class="flex items-center space-x-1.5 hover:text-rose-500 transition group"
-                        th:classappend="${currentUser != null and tweet.likedByUsernames != null and tweet.likedByUsernames.contains(currentUser.username)} ? 'text-rose-500' : ''">
-                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                    <span th:text="${tweet.likesCount}">0</span>
-                </button>
+                <!-- Start Chat with Author -->
+                <form th:action="@{/messages/direct/start}" method="post" class="inline">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="recipient" th:value="${tweet.authorUsername}" />
+                    <button type="submit" class="hover:text-sky-400 transition flex items-center space-x-1 text-[11px]" title="Direct Message">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        <span class="hidden sm:inline">Message</span>
+                    </button>
+                </form>
 
-                <!-- Share -->
-                <button type="button" class="flex items-center space-x-1.5 hover:text-emerald-400 transition group">
-                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                    </svg>
-                </button>
             </div>
+
         </div>
+
     </article>
 
+    <script>
+        function toggleLikePost(btn) {
+            const tweetId = btn.getAttribute('data-tweet-id');
+            const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+            fetch('/tweets/' + tweetId + '/like', {
+                method: 'POST',
+                headers: {
+                    [header]: token,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(res => res.text())
+            .then(count => {
+                const counter = btn.querySelector('.like-count');
+                if (counter) counter.innerText = count;
+                btn.classList.add('text-rose-500');
+            })
+            .catch(err => console.error('Like error:', err));
+        }
+    </script>
 </div>
 
 </body>

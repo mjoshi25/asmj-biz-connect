@@ -1,7 +1,6 @@
 package com.joshi.twitterclone.service;
 
 import com.joshi.twitterclone.dto.ConversationSummaryDto;
-import com.joshi.twitterclone.dto.CreateGroupRequest;
 import com.joshi.twitterclone.dto.DirectMessageDto;
 import com.joshi.twitterclone.model.Conversation;
 import com.joshi.twitterclone.model.DirectMessage;
@@ -10,222 +9,248 @@ import com.joshi.twitterclone.repository.ConversationRepository;
 import com.joshi.twitterclone.repository.DirectMessageRepository;
 import com.joshi.twitterclone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DirectMessageService {
 
-    private final DirectMessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
+    private final DirectMessageRepository directMessageRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
-    private final SimpMessagingTemplate messagingTemplate;
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("h:mm a · MMM d");
+    public List<ConversationSummaryDto> getUserConversations(String username) {
+        if (username == null || username.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        List<Conversation> conversations = conversationRepository.findByParticipantUsernamesContainingOrderByUpdatedAtDesc(username.toLowerCase().trim());
+        
+        return conversations.stream().map((Conversation c) -> {
+            String title;
+            String defaultInitial;
+            
+            if (c.isGroup()) {
+                title = c.getName() != null && !c.getName().isBlank() ? c.getName() : "Group Chat";
+                defaultInitial = title.substring(0, 1).toUpperCase();
+            } else {
+                String otherUsername = c.getParticipantUsernames().stream()
+                        .filter(u -> !u.equalsIgnoreCase(username))
+                        .findFirst()
+                        .orElse(username);
+                
+                User otherUser = userRepository.findByUsername(otherUsername.toLowerCase()).orElse(null);
+                title = otherUser != null ? otherUser.getDisplayName() : "@" + otherUsername;
+                defaultInitial = title.substring(0, 1).toUpperCase();
+            }
+
+            String formattedTime = "";
+            if (c.getUpdatedAt() != null) {
+                formattedTime = c.getUpdatedAt().format(DateTimeFormatter.ofPattern("MMM d"));
+            }
+
+            int count = c.getParticipantUsernames() != null ? c.getParticipantUsernames().size() : 0;
+
+            return ConversationSummaryDto.builder()
+                    .conversationId(c.getId())
+                    .title(title)
+                    .defaultInitial(defaultInitial)
+                    .lastMessage(c.getLastMessage() != null ? c.getLastMessage() : "No messages yet")
+                    .lastMessageTimeFormatted(formattedTime)
+                    .isGroup(c.isGroup())
+                    .participantCount(count)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    public Conversation getConversationById(String conversationId, String currentUsername) {
+        Conversation convo = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
+
+        if (currentUsername != null && !convo.getParticipantUsernames().contains(currentUsername.toLowerCase().trim())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this conversation");
+        }
+
+        return convo;
+    }
 
     public Conversation getConversationById(String conversationId) {
-        return conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found: " + conversationId));
+        return getConversationById(conversationId, null);
     }
 
     public Conversation getOrCreateDirectConversation(String user1, String user2) {
         String u1 = user1.toLowerCase().trim();
         String u2 = user2.toLowerCase().trim();
 
-        // Check if both users exist
-        userRepository.findByUsername(u2)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipient @" + user2 + " not found"));
+        List<Conversation> existing = conversationRepository.findByParticipantUsernamesContainingOrderByUpdatedAtDesc(u1);
+        for (Conversation c : existing) {
+            if (!c.isGroup() && c.getParticipantUsernames().contains(u2) && c.getParticipantUsernames().size() == 2) {
+                return c;
+            }
+        }
 
-        return conversationRepository.findDirectConversation(u1, u2)
-                .orElseGet(() -> {
-                    Conversation c = new Conversation();
-                    c.setGroup(false);
-                    c.setParticipantUsernames(new HashSet<>(Set.of(u1, u2)));
-                    c.setCreatedAt(LocalDateTime.now());
-                    c.setUpdatedAt(LocalDateTime.now());
-                    return conversationRepository.save(c);
-                });
+        Conversation newConvo = new Conversation();
+        newConvo.setGroup(false);
+        newConvo.setParticipantUsernames(new HashSet<>(Set.of(u1, u2)));
+        newConvo.setCreatedAt(LocalDateTime.now());
+        newConvo.setUpdatedAt(LocalDateTime.now());
+        return conversationRepository.save(newConvo);
     }
 
-    public List<ConversationSummaryDto> getUserConversations(String currentUsername) {
-        String username = currentUsername.toLowerCase().trim();
-        List<Conversation> convos = conversationRepository.findByParticipantUsernamesContainingOrderByUpdatedAtDesc(username);
+    public Conversation createGroupConversation(String creatorUsername, String groupName, List<String> memberUsernames) {
+        if (groupName == null || groupName.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group name cannot be blank");
+        }
 
-        return convos.stream().map(c -> {
-            String title = c.getName();
-            String initial = "G";
+        Set<String> participants = new HashSet<>();
+        participants.add(creatorUsername.toLowerCase().trim());
 
-            if (!c.isGroup()) {
-                String otherUser = c.getParticipantUsernames().stream()
-                        .filter(u -> !u.equalsIgnoreCase(username))
-                        .findFirst().orElse("User");
-
-                User u = userRepository.findByUsername(otherUser).orElse(null);
-                title = (u != null && u.getDisplayName() != null && !u.getDisplayName().isBlank()) 
-                        ? u.getDisplayName() 
-                        : otherUser;
-                initial = !title.isEmpty() ? title.substring(0, 1).toUpperCase() : "U";
+        if (memberUsernames != null) {
+            for (String member : memberUsernames) {
+                if (member != null && !member.isBlank()) {
+                    participants.add(member.toLowerCase().trim());
+                }
             }
+        }
 
-            return ConversationSummaryDto.builder()
-                    .conversationId(c.getId())
-                    .title(title != null ? title : "Chat")
-                    .lastMessage(c.getLastMessage() != null ? c.getLastMessage() : "No messages yet")
-                    .lastSenderName(c.getLastSenderName())
-                    .lastMessageTimeFormatted(c.getUpdatedAt() != null ? c.getUpdatedAt().format(FORMATTER) : "")
-                    .defaultInitial(initial)
-                    .isGroup(c.isGroup())
-                    .unreadCount(0)
+        if (participants.size() < 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A group must have at least 2 participants");
+        }
+
+        Conversation group = new Conversation();
+        group.setGroup(true);
+        group.setName(groupName.trim());
+        group.setParticipantUsernames(participants);
+        group.setCreatedAt(LocalDateTime.now());
+        group.setUpdatedAt(LocalDateTime.now());
+        group.setLastMessage("Group created by @" + creatorUsername);
+        group.setLastSenderName(creatorUsername);
+
+        return conversationRepository.save(group);
+    }
+
+    public void addMembersToGroup(String username, String conversationId, List<String> newMembers) {
+        Conversation convo = getConversationById(conversationId, username);
+        if (!convo.isGroup()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot add members to a direct message");
+        }
+
+        if (newMembers != null) {
+            for (String member : newMembers) {
+                if (member != null && !member.isBlank()) {
+                    convo.getParticipantUsernames().add(member.toLowerCase().trim());
+                }
+            }
+        }
+
+        convo.setUpdatedAt(LocalDateTime.now());
+        convo.setLastMessage("@" + username + " added new members");
+        conversationRepository.save(convo);
+    }
+
+    public void exitGroup(String username, String conversationId) {
+        Conversation convo = getConversationById(conversationId, username);
+        if (!convo.isGroup()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot exit a direct message");
+        }
+
+        convo.getParticipantUsernames().remove(username.toLowerCase().trim());
+
+        if (convo.getParticipantUsernames().isEmpty()) {
+            conversationRepository.delete(convo);
+            return;
+        }
+
+        convo.setUpdatedAt(LocalDateTime.now());
+        convo.setLastMessage("@" + username + " left the group");
+        conversationRepository.save(convo);
+    }
+
+    public List<DirectMessageDto> getConversationMessages(String conversationId, String currentUsername) {
+        List<DirectMessage> messages = directMessageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+
+        return messages.stream().map(m -> {
+            boolean isSelf = m.getSenderUsername().equalsIgnoreCase(currentUsername);
+            String formattedTime = m.getCreatedAt() != null 
+                    ? m.getCreatedAt().format(DateTimeFormatter.ofPattern("hh:mm a")) 
+                    : "";
+
+            return DirectMessageDto.builder()
+                    .id(m.getId())
+                    .conversationId(m.getConversationId())
+                    .senderUsername(m.getSenderUsername())
+                    .senderDisplayName(m.getSenderDisplayName())
+                    .content(m.getContent())
+                    .mediaUrl(m.getMediaUrl())
+                    .mediaType(m.getMediaType())
+                    .originalFileName(m.getOriginalFileName())
+                    .isSelf(isSelf)
+                    .createdAtFormatted(formattedTime)
                     .build();
         }).collect(Collectors.toList());
     }
 
-    public List<DirectMessageDto> getConversationMessages(String conversationId, String currentUsername) {
-        Conversation convo = getConversationById(conversationId);
-
-        if (!convo.getParticipantUsernames().contains(currentUsername.toLowerCase().trim())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to view messages");
-        }
-
-        List<DirectMessage> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
-        return messages.stream()
-                .map(m -> mapToDto(m, m.getSenderUsername().equalsIgnoreCase(currentUsername), convo.isGroup(), convo.getName()))
-                .collect(Collectors.toList());
-    }
-
     public DirectMessage sendMessage(String senderUsername, String conversationId, String content, MultipartFile file) {
-        User sender = userRepository.findByUsername(senderUsername.toLowerCase().trim())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sender not found"));
-
-        Conversation convo = getConversationById(conversationId);
+        Conversation convo = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
 
         if (!convo.getParticipantUsernames().contains(senderUsername.toLowerCase().trim())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not in conversation");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized");
         }
+
+        User sender = userRepository.findByUsername(senderUsername.toLowerCase().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         DirectMessage msg = new DirectMessage();
         msg.setConversationId(conversationId);
         msg.setSenderId(sender.getId());
         msg.setSenderUsername(sender.getUsername());
         msg.setSenderDisplayName(sender.getDisplayName());
-        msg.setSenderAvatarUrl(sender.getAvatarUrl());
-        msg.setContent(content != null ? content.trim() : "");
+        msg.setContent(content);
         msg.setCreatedAt(LocalDateTime.now());
 
         if (file != null && !file.isEmpty()) {
-            String uploadedUrl = fileStorageService.saveFile(file);
-            msg.setMediaUrl(uploadedUrl);
+            String contentType = file.getContentType();
+            String url;
+            if (contentType != null && contentType.startsWith("image/")) {
+                url = fileStorageService.saveImageOptimized(file);
+                msg.setMediaType("IMAGE");
+            } else {
+                url = fileStorageService.saveFile(file);
+                msg.setMediaType("FILE");
+            }
+            msg.setMediaUrl(url);
             msg.setOriginalFileName(file.getOriginalFilename());
-            String ct = file.getContentType();
-            msg.setMediaType((ct != null && ct.startsWith("image/")) ? "IMAGE" : "FILE");
         }
 
-        DirectMessage savedMsg = messageRepository.save(msg);
+        DirectMessage savedMsg = directMessageRepository.save(msg);
 
-        String snippet = (msg.getContent() != null && !msg.getContent().isBlank())
-                ? msg.getContent()
-                : (msg.getMediaType() != null ? "Attachment" : "Message");
-
-        convo.setLastMessage(snippet);
+        convo.setLastMessage(content != null && !content.isBlank() ? content : "[Attachment]");
         convo.setLastSenderName(sender.getDisplayName());
         convo.setUpdatedAt(LocalDateTime.now());
         conversationRepository.save(convo);
 
-        for (String participant : convo.getParticipantUsernames()) {
-            boolean isSelf = participant.equalsIgnoreCase(senderUsername);
-            DirectMessageDto dto = mapToDto(savedMsg, isSelf, convo.isGroup(), convo.getName());
-            messagingTemplate.convertAndSendToUser(participant, "/queue/messages", dto);
-        }
-
         return savedMsg;
     }
 
-    public Conversation createGroupConversation(String creatorUsername, CreateGroupRequest request) {
-        Conversation group = new Conversation();
-        group.setGroup(true);
-        group.setName(request.getName() != null && !request.getName().isBlank() ? request.getName().trim() : "Group Chat");
-
-        Set<String> participants = new HashSet<>();
-        participants.add(creatorUsername.toLowerCase().trim());
-        if (request.getMemberUsernames() != null) {
-            request.getMemberUsernames().forEach(u -> participants.add(u.toLowerCase().trim()));
+    public List<User> getAvailableUsersForChat(String currentUsername) {
+        if (currentUsername == null || currentUsername.isBlank()) {
+            return userRepository.findAll();
         }
-
-        group.setParticipantUsernames(participants);
-        group.setCreatedAt(LocalDateTime.now());
-        group.setUpdatedAt(LocalDateTime.now());
-        return conversationRepository.save(group);
-    }
-
-    public void addMembersToGroup(String conversationId, String requestingUsername, List<String> newUsernames) {
-        Conversation convo = getConversationById(conversationId);
-
-        if (!convo.isGroup() || !convo.getParticipantUsernames().contains(requestingUsername.toLowerCase().trim())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized");
-        }
-
-        if (newUsernames != null) {
-            newUsernames.forEach(u -> convo.getParticipantUsernames().add(u.toLowerCase().trim()));
-        }
-        convo.setUpdatedAt(LocalDateTime.now());
-        conversationRepository.save(convo);
-    }
-
-    public void leaveGroup(String conversationId, String username) {
-        Conversation convo = getConversationById(conversationId);
-
-        convo.getParticipantUsernames().remove(username.toLowerCase().trim());
-        if (convo.getParticipantUsernames().isEmpty()) {
-            conversationRepository.delete(convo);
-        } else {
-            convo.setUpdatedAt(LocalDateTime.now());
-            conversationRepository.save(convo);
-        }
-    }
-
-    public List<User> getGroupMembers(String conversationId, String currentUsername) {
-        Conversation convo = getConversationById(conversationId);
-
         return userRepository.findAll().stream()
-                .filter(u -> convo.getParticipantUsernames().contains(u.getUsername().toLowerCase()))
+                .filter(u -> !u.getUsername().equalsIgnoreCase(currentUsername))
+                .sorted(Comparator.comparing(User::getDisplayName, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
-    }
-
-    public List<User> getNonMembersForGroup(String conversationId, String currentUsername) {
-        Conversation convo = getConversationById(conversationId);
-
-        return userRepository.findAll().stream()
-                .filter(u -> !convo.getParticipantUsernames().contains(u.getUsername().toLowerCase()))
-                .collect(Collectors.toList());
-    }
-
-    private DirectMessageDto mapToDto(DirectMessage msg, boolean isSelf, boolean isGroup, String convoTitle) {
-        return DirectMessageDto.builder()
-                .id(msg.getId())
-                .conversationId(msg.getConversationId())
-                .senderUsername(msg.getSenderUsername())
-                .senderDisplayName(msg.getSenderDisplayName())
-                .senderAvatarUrl(msg.getSenderAvatarUrl())
-                .content(msg.getContent())
-                .mediaUrl(msg.getMediaUrl())
-                .mediaType(msg.getMediaType())
-                .originalFileName(msg.getOriginalFileName())
-                .createdAtFormatted(msg.getCreatedAt() != null ? msg.getCreatedAt().format(FORMATTER) : "")
-                .isSelf(isSelf)
-                .isGroup(isGroup)
-                .conversationTitle(convoTitle)
-                .build();
     }
 }

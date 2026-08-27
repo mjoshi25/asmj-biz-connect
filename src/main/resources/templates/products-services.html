@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>B2B Products & Services / ASMJ Biz Connect</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased overflow-x-hidden">
+
+    <div class="max-w-[1400px] mx-auto flex justify-center min-h-screen">
+        
+        <!-- Navigation -->
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='products')}"></div>
+
+        <!-- Main Content -->
+        <main class="w-full md:max-w-2xl lg:max-w-3xl xl:max-w-4xl border-x border-zinc-800/80 min-h-screen pt-14 md:pt-0 pb-24">
+            
+            <!-- Header Bar -->
+            <div class="sticky top-14 md:top-0 bg-[#080c14]/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-3 sm:px-6 sm:py-4 z-20 flex items-center justify-between gap-3">
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-white leading-tight">Products & Services Catalog</h1>
+                    <p class="text-[11px] sm:text-xs text-zinc-500">Procure enterprise assets, technical consulting, and verified business services</p>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <a th:href="@{/products-services/manage}" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold px-3 py-1.5 rounded-full text-xs transition">
+                        My Listings
+                    </a>
+                    <button type="button" 
+                            onclick="document.getElementById('post-item-modal').classList.remove('hidden')" 
+                            class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-1.5 rounded-full text-xs transition shadow-sm active:scale-95">
+                        + Post Item
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-6">
+                
+                <!-- City Search Filter -->
+                <form th:action="@{/products-services}" method="get" class="flex space-x-2">
+                    <input type="text" name="city" th:value="${selectedCity}" placeholder="Filter products or services by city (e.g. Bengaluru, Mumbai)..." 
+                           class="flex-1 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500" />
+                    <button type="submit" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition">Filter</button>
+                </form>
+
+                <!-- Empty State -->
+                <div th:if="${#lists.isEmpty(items)}" class="p-12 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                    No approved products or services available currently. Click <strong>+ Post Item</strong> to submit yours for review!
+                </div>
+
+                <!-- Products/Services Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div th:each="item : ${items}" class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700 transition flex flex-col justify-between">
+                        <div>
+                            <div class="h-44 bg-zinc-950 overflow-hidden relative">
+                                <img th:if="${item.imageUrls != null and !item.imageUrls.isEmpty()}" th:src="${item.imageUrls[0]}" class="w-full h-full object-cover" />
+                                <div th:unless="${item.imageUrls != null and !item.imageUrls.isEmpty()}" class="w-full h-full bg-gradient-to-r from-blue-950 to-indigo-950 flex items-center justify-center text-zinc-500 text-xs">No Image</div>
+                                <span class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-md border border-white/10 text-emerald-400 font-bold text-xs px-2.5 py-0.5 rounded-full"
+                                      th:text="|₹${item.price} ${item.priceUnit != null ? item.priceUnit : ''}|">₹5,000</span>
+                            </div>
+
+                            <div class="p-4 space-y-2">
+                                <span class="text-[10px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full uppercase" th:text="${item.category}">Category</span>
+                                <h3 class="font-bold text-sm text-white truncate" th:text="${item.title}">Item Title</h3>
+                                <p class="text-xs text-zinc-400 line-clamp-2" th:text="${item.description}">Description...</p>
+
+                                <div class="text-[11px] text-zinc-500 space-y-0.5 pt-1">
+                                    <p th:text="|🏢 ${item.businessName} (@${item.vendorUsername})|">Provider</p>
+                                    <p th:text="|📍 ${item.locationCity}|">Location</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 pt-0">
+                            <button type="button"
+                                    th:data-id="${item.id}"
+                                    th:data-title="${item.title}"
+                                    onclick="openInquiryModal(this)"
+                                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm active:scale-95">
+                                Inquire & Connect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODAL: Post Product / Service -->
+    <div id="post-item-modal" class="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <h3 class="font-bold text-sm text-white">Post Product / Service (Pending Admin Review)</h3>
+                <button type="button" onclick="document.getElementById('post-item-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <form th:action="@{/products-services/post}" method="post" enctype="multipart/form-data" class="space-y-3 text-xs">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <input type="text" name="title" placeholder="Product / Service Title" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" name="businessName" placeholder="Business / Provider Name" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    <select name="category" class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white">
+                        <option value="PRODUCT_PHYSICAL">Physical Product</option>
+                        <option value="PRODUCT_DIGITAL">Digital Product / Asset</option>
+                        <option value="SERVICE_CONSULTING">Consulting Service</option>
+                        <option value="SERVICE_TECHNICAL">Technical / IT Service</option>
+                        <option value="SERVICE_MAINTENANCE">Maintenance</option>
+                        <option value="SERVICE_LOGISTICS">Logistics Service</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" step="0.01" name="price" placeholder="Price (₹)" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    <input type="text" name="priceUnit" placeholder="Unit (e.g. /hr, /month)" class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" name="locationCity" placeholder="City (e.g. Bengaluru)" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    <input type="text" name="contactNumber" placeholder="Contact Mobile" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                </div>
+
+                <textarea name="description" rows="3" placeholder="Detailed product specifications or service deliverables..." required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white resize-none"></textarea>
+
+                <div>
+                    <label class="block text-zinc-400 mb-1">Upload Product/Service Media</label>
+                    <input type="file" name="images" multiple accept="image/*" class="w-full text-zinc-400 file:bg-zinc-800 file:text-white file:border-0 file:rounded-lg file:p-2 file:text-xs" />
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 font-bold text-white py-2.5 rounded-xl transition">Submit For Review</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Inquiry Modal -->
+    <div id="inquiry-modal" class="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <h3 class="font-bold text-xs sm:text-sm text-white" id="modal-item-title">Inquire</h3>
+                <button type="button" onclick="document.getElementById('inquiry-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <form th:action="@{/products-services/inquire}" method="post" class="space-y-3 text-xs">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="itemId" id="modal-item-id" />
+
+                <textarea name="message" rows="3" required placeholder="State your requirements, quantity, or project scope..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white resize-none"></textarea>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 font-bold text-white py-2.5 rounded-xl transition">Send Inquiry & Open Chat</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openInquiryModal(button) {
+            const id = button.getAttribute('data-id');
+            const title = button.getAttribute('data-title');
+
+            document.getElementById('modal-item-id').value = id;
+            document.getElementById('modal-item-title').innerText = 'Inquire: ' + title;
+            document.getElementById('inquiry-modal').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

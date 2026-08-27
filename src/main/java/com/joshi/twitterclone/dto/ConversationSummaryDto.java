@@ -12,10 +12,9 @@ import lombok.NoArgsConstructor;
 public class ConversationSummaryDto {
     private String conversationId;
     private String title;
-    private String lastMessage;
-    private String lastSenderName;
-    private String lastMessageTimeFormatted;
     private String defaultInitial;
+    private String lastMessage;
+    private String lastMessageTimeFormatted;
     private boolean isGroup;
-    private int unreadCount;
+    private int participantCount;
 }
