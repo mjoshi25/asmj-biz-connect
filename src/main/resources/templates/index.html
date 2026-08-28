@@ -3,70 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASMJ Biz Connect — Enterprise Social & B2B Marketplace</title>
+    <title>ASMJ Biz Connect / Next-Gen Enterprise Business Exchange</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
-    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#080c14] text-zinc-100 min-h-screen flex flex-col justify-between antialiased selection:bg-blue-500/30">
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased selection:bg-blue-600 selection:text-white">
 
-    <!-- Header / Navbar -->
-    <header class="max-w-7xl mx-auto w-full px-6 py-5 flex items-center justify-between">
+    <!-- Navbar -->
+    <header class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between border-b border-zinc-800/60">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-sky-500/20">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-sky-500/20">
                 A
             </div>
-            <div class="flex flex-col">
-                <span class="font-extrabold text-sm tracking-tight text-white leading-none">ASMJ</span>
-                <span class="text-[10px] font-bold text-sky-400 tracking-wider uppercase mt-0.5">Biz Connect</span>
+            <div>
+                <span class="font-black text-sm tracking-tight text-white block leading-none">ASMJ</span>
+                <span class="text-[9px] font-bold text-sky-400 tracking-wider uppercase">Biz Connect</span>
             </div>
         </div>
 
         <div class="flex items-center space-x-3">
-            <a th:href="@{/login}" class="text-xs font-bold text-zinc-300 hover:text-white px-4 py-2 rounded-xl transition">
-                Sign In
-            </a>
-            <a th:href="@{/register}" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md shadow-blue-500/20 transition active:scale-95">
-                Join Network
-            </a>
+            <a th:href="@{/login}" class="text-xs font-semibold text-zinc-300 hover:text-white px-4 py-2 rounded-xl transition">Sign In</a>
+            <a th:href="@{/register}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4.5 py-2.5 rounded-xl transition shadow-lg shadow-blue-500/20 active:scale-95">Get Started</a>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <main class="max-w-4xl mx-auto px-6 py-16 text-center space-y-8 my-auto">
-        <div class="inline-flex items-center space-x-2 bg-zinc-900/80 border border-zinc-800 px-3.5 py-1.5 rounded-full text-xs text-zinc-300 backdrop-blur-md">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>The Enterprise Social Network & B2B Marketplace</span>
+    <section class="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center space-y-6">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+            <span>Next-Gen Enterprise Business Exchange</span>
         </div>
 
-        <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-            Connect. Trade. <br class="hidden sm:inline"/>
-            <span class="bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-                Scale Your Business.
-            </span>
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-none">
+            Empower Your Business <br class="hidden sm:inline" />Connections & Career Growth
         </h1>
 
         <p class="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Real-time business updates, interactive 3D product shelves, commercial vehicle fleet leasing, and instant corporate insurance quotes — all unified in one workspace.
+            A real-time networking ecosystem engineered for businesses, founders, and professionals. Promote services, engage in verified deal-making, manage fleet rentals, and secure corporate talent.
         </p>
 
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <a th:href="@{/register}" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-8 py-3 rounded-2xl text-xs transition shadow-lg shadow-blue-500/25 active:scale-95">
-                Create Free Account
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+            <a th:href="@{/register}" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-2xl text-xs sm:text-sm transition shadow-xl shadow-blue-500/25 active:scale-95 text-center">
+                Join ASMJ Biz Connect
             </a>
-            <a th:href="@{/login}" class="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-bold px-8 py-3 rounded-2xl text-xs transition">
+            <a th:href="@{/login}" class="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-bold px-8 py-3.5 rounded-2xl text-xs sm:text-sm transition text-center">
                 Sign In to Workspace
             </a>
         </div>
-    </main>
+    </section>
+
+    <!-- Feature Grid with Rich Imagery -->
+    <section class="max-w-7xl mx-auto px-6 py-16 space-y-8">
+        <div class="text-center space-y-2">
+            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Core Platform Capabilities</h2>
+            <p class="text-xs sm:text-sm text-zinc-400">Everything you need to run, scale, and secure enterprise operations in one unified workspace.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Feature 1: Marketplace & Bag -->
+            <div class="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6 flex flex-col justify-between min-h-[320px] group">
+                <img src="https://images.unsplash.com/photo-1556742049-0a67d553c253?auto=format&fit=crop&w=800&q=80" 
+                     alt="Marketplace" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" />
+                <div class="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/80 to-transparent"></div>
+                
+                <div class="relative z-10">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Enterprise Marketplace & Bag</h3>
+                    <p class="text-xs text-zinc-400 mt-2 leading-relaxed">Procure physical inventory, digital SaaS assets, vehicle rentals, and corporate insurance packages with instant address capture.</p>
+                </div>
+                <div class="relative z-10 pt-4">
+                    <a th:href="@{/marketplace}" class="text-xs font-bold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">Explore Marketplace &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Feature 2: Real-time Messaging & Groups -->
+            <div class="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6 flex flex-col justify-between min-h-[320px] group">
+                <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80" 
+                     alt="Messaging" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" />
+                <div class="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/80 to-transparent"></div>
+                
+                <div class="relative z-10">
+                    <div class="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Direct & Group Chat Rooms</h3>
+                    <p class="text-xs text-zinc-400 mt-2 leading-relaxed">Secure 1:1 direct messaging and dynamic group chat rooms with file attachments, image sharing, and instant order notifications.</p>
+                </div>
+                <div class="relative z-10 pt-4">
+                    <a th:href="@{/messages}" class="text-xs font-bold text-purple-400 hover:text-purple-300 inline-flex items-center gap-1">Open Messenger &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Feature 3: Career & Job Recruitment -->
+            <div class="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6 flex flex-col justify-between min-h-[320px] group">
+                <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80" 
+                     alt="Recruitment" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" />
+                <div class="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/80 to-transparent"></div>
+                
+                <div class="relative z-10">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Verified Career Recruitment</h3>
+                    <p class="text-xs text-zinc-400 mt-2 leading-relaxed">Publish tech requisitions, review candidate applications, build professional resumes, and manage hiring pipelines seamlessly.</p>
+                </div>
+                <div class="relative z-10 pt-4">
+                    <a th:href="@{/jobs}" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1">Browse Job Board &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer class="max-w-7xl mx-auto w-full px-6 py-6 border-t border-zinc-900 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-2">
-        <p>&copy; 2026 ASMJ Biz Connect. All rights reserved.</p>
-        <div class="flex space-x-4">
-            <a th:href="@{/privacy}" class="hover:underline">Privacy Policy</a>
-            <a th:href="@{/terms}" class="hover:underline">Terms of Service</a>
-        </div>
+    <footer class="max-w-7xl mx-auto px-6 py-12 border-t border-zinc-800/60 text-center text-xs text-zinc-500">
+        <p>&copy; 2026 ASMJ Biz Connect. All rights reserved. Secure Enterprise Network.</p>
     </footer>
 
 </body>
