@@ -20,7 +20,7 @@
         </a>
 
         <div class="flex items-center space-x-2">
-            <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/analytics}" class="text-amber-400 p-1" title="Analytics">
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/analytics}" class="text-amber-400 p-1" title="Analytics & Moderation">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             </a>
             <form th:action="@{/logout}" method="post">
@@ -66,7 +66,7 @@
                     <span class="hidden xl:inline text-xs sm:text-sm">Messages</span>
                 </a>
 
-                <!-- Vehicles & Insurance Marketplace -->
+                <!-- Marketplace -->
                 <a th:href="@{/marketplace}" 
                    class="flex items-center space-x-4 px-4 py-2.5 rounded-2xl transition duration-200 group"
                    th:classappend="${activeTab == 'marketplace'} ? 'font-black text-white bg-zinc-900/80 shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40 font-medium'">
@@ -84,6 +84,16 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                     </svg>
                     <span class="hidden xl:inline text-xs sm:text-sm">Products & Services</span>
+                </a>
+
+                <!-- Bag & Cart -->
+                <a th:href="@{/cart}" 
+                   class="flex items-center space-x-4 px-4 py-2.5 rounded-2xl transition duration-200 group"
+                   th:classappend="${activeTab == 'cart'} ? 'font-black text-white bg-zinc-900/80 shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40 font-medium'">
+                    <svg class="w-5 h-5 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span class="hidden xl:inline text-xs sm:text-sm">Bag & Cart</span>
                 </a>
 
                 <!-- Careers & Jobs -->
@@ -106,7 +116,7 @@
                     <span class="hidden xl:inline text-xs sm:text-sm">Events</span>
                 </a>
 
-                <!-- Resume Creator -->
+                <!-- Resume -->
                 <a th:href="@{/resume}" 
                    class="flex items-center space-x-4 px-4 py-2.5 rounded-2xl transition duration-200 group"
                    th:classappend="${activeTab == 'resume'} ? 'font-black text-white bg-zinc-900/80 shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40 font-medium'">
@@ -182,8 +192,8 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
         </a>
 
-        <a th:href="@{/products-services}" class="p-2 transition" th:classappend="${activeTab == 'products'} ? 'text-blue-500' : 'text-zinc-400'">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        <a th:href="@{/cart}" class="p-2 transition" th:classappend="${activeTab == 'cart'} ? 'text-blue-500' : 'text-zinc-400'">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         </a>
 
         <!-- Floating Quick Post Action -->
@@ -237,16 +247,6 @@
         </form>
     </div>
 </div>
-
-<script>
-    document.addEventListener('htmx:configRequest', (evt) => {
-        const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
-        const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
-        if (token && header) {
-            evt.detail.headers[header] = token;
-        }
-    });
-</script>
 
 </body>
 </html>

@@ -1,19 +1,20 @@
 package com.joshi.twitterclone.controller;
 
 import com.joshi.twitterclone.model.User;
-import com.joshi.twitterclone.model.jobs.ApplicationStatus;
 import com.joshi.twitterclone.model.jobs.JobApplication;
 import com.joshi.twitterclone.model.jobs.JobListing;
+import com.joshi.twitterclone.service.EventService;
 import com.joshi.twitterclone.service.JobService;
 import com.joshi.twitterclone.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.List;
 
 @Controller
@@ -23,67 +24,74 @@ public class JobController {
 
     private final JobService jobService;
     private final UserService userService;
+    private final EventService eventService;
 
     @GetMapping
     public String viewJobs(@AuthenticationPrincipal UserDetails userDetails,
                            @RequestParam(value = "city", required = false) String city,
+                           @RequestParam(value = "q", required = false) String query,
                            Model model) {
-        String username = userDetails.getUsername();
+        String username = userDetails != null ? userDetails.getUsername() : "";
         User currentUser = userService.getUserByUsername(username);
 
-        List<JobListing> availableJobs = jobService.getAvailableJobs(city);
-        List<JobApplication> myApplications = jobService.getApplicationsByApplicant(username);
+        List<JobListing> jobs = jobService.getApprovedJobs(city, query);
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("jobs", availableJobs);
-        model.addAttribute("myApplications", myApplications);
+        model.addAttribute("jobs", jobs != null ? jobs : Collections.emptyList());
         model.addAttribute("selectedCity", city != null ? city : "");
+        model.addAttribute("searchQuery", query != null ? query : "");
+        model.addAttribute("upcomingEvents", eventService.getTopUpcomingEvents(3));
 
         return "jobs";
     }
 
     @PostMapping("/post")
     public String postJob(@AuthenticationPrincipal UserDetails userDetails,
-                          @ModelAttribute JobListing jobListing,
-                          @RequestParam(value = "skillsList", required = false) String skillsList,
-                          @RequestParam(value = "logo", required = false) MultipartFile logo) {
-        jobService.createJobListing(userDetails.getUsername(), jobListing, skillsList, logo);
-        return "redirect:/jobs?posted=true";
+                          @ModelAttribute JobListing jobListing) {
+        jobService.createJob(userDetails.getUsername(), jobListing);
+        return "redirect:/jobs/manage?posted=true";
     }
 
-    @PostMapping("/apply")
-    public String applyForJob(@AuthenticationPrincipal UserDetails userDetails,
-                              @RequestParam("jobId") String jobId,
-                              @RequestParam("fullName") String fullName,
-                              @RequestParam("email") String email,
-                              @RequestParam("phone") String phone,
-                              @RequestParam("yearsOfExperience") int yearsOfExperience,
-                              @RequestParam(value = "coverLetter", required = false) String coverLetter,
-                              @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile) {
-        jobService.submitApplication(userDetails.getUsername(), jobId, fullName, email, phone, yearsOfExperience, coverLetter, resumeFile);
-        return "redirect:/jobs?applied=true";
+    @PostMapping("/update/{id}")
+    public String updateJob(@AuthenticationPrincipal UserDetails userDetails,
+                            @PathVariable("id") String jobId,
+                            @ModelAttribute JobListing jobListing) {
+        jobService.updateJob(userDetails.getUsername(), jobId, jobListing);
+        return "redirect:/jobs/manage?updated=true";
+    }
+
+    @PostMapping("/delete/{id}")
+    public String deleteJob(@AuthenticationPrincipal UserDetails userDetails,
+                            @PathVariable("id") String jobId) {
+        jobService.deleteJob(userDetails.getUsername(), jobId);
+        return "redirect:/jobs/manage?deleted=true";
     }
 
     @GetMapping("/manage")
-    public String manageJobsAndApplicants(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        String username = userDetails.getUsername();
-        User currentUser = userService.getUserByUsername(username);
-
-        List<JobListing> myPostedJobs = jobService.getJobsPostedBy(username);
-        List<JobApplication> receivedApplications = jobService.getApplicationsForRecruiter(username);
+    public String viewRecruiterDashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        User currentUser = userService.getUserByUsername(userDetails.getUsername());
+        List<JobListing> myListings = jobService.getMyPostedJobs(userDetails.getUsername());
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("postedJobs", myPostedJobs);
-        model.addAttribute("applications", receivedApplications);
+        model.addAttribute("myListings", myListings);
 
-        return "job-manage";
+        return "jobs-manage";
     }
 
-    @PostMapping("/applications/{applicationId}/status")
-    public String updateStatus(@AuthenticationPrincipal UserDetails userDetails,
-                               @PathVariable("applicationId") String applicationId,
-                               @RequestParam("status") ApplicationStatus status) {
-        jobService.updateApplicationStatus(applicationId, userDetails.getUsername(), status);
-        return "redirect:/jobs/manage";
+    @PostMapping("/apply")
+    public String applyJob(@AuthenticationPrincipal UserDetails userDetails,
+                           @RequestParam("jobId") String jobId,
+                           @ModelAttribute JobApplication application) {
+        jobService.applyForJob(userDetails.getUsername(), jobId, application);
+        return "redirect:/jobs?applied=true";
+    }
+
+    @PostMapping("/admin/{id}/moderate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String moderateJob(@PathVariable("id") String id,
+                              @RequestParam("approve") boolean approve,
+                              @RequestParam(value = "rejectionReason", required = false) String reason) {
+        jobService.moderateJob(id, approve, reason);
+        return "redirect:/admin/analytics";
     }
 }

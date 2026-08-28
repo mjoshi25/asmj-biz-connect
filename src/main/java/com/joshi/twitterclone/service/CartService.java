@@ -1,151 +1,153 @@
 package com.joshi.twitterclone.service;
 
-import com.joshi.twitterclone.model.Conversation;
-import com.joshi.twitterclone.model.marketplace.*;
-import com.joshi.twitterclone.repository.marketplace.MarketplaceOrderRepository;
-import com.joshi.twitterclone.repository.marketplace.MarketplaceProductRepository;
-import com.joshi.twitterclone.repository.marketplace.ShoppingCartRepository;
+import com.joshi.twitterclone.model.User;
+import com.joshi.twitterclone.model.cart.Cart;
+import com.joshi.twitterclone.model.cart.CartItem;
+import com.joshi.twitterclone.model.cart.Order;
+import com.joshi.twitterclone.model.products.ProductServiceItem;
+import com.joshi.twitterclone.repository.UserRepository;
+import com.joshi.twitterclone.repository.cart.CartRepository;
+import com.joshi.twitterclone.repository.cart.OrderRepository;
+import com.joshi.twitterclone.repository.products.ProductServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Optional;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CartService {
 
-    private final ShoppingCartRepository cartRepository;
-    private final MarketplaceProductRepository productRepository;
-    private final MarketplaceOrderRepository orderRepository;
+    private final CartRepository cartRepository;
+    private final OrderRepository orderRepository;
+    private final ProductServiceRepository productRepository;
+    private final UserRepository userRepository;
     private final DirectMessageService directMessageService;
 
-    public ShoppingCart getOrCreateCart(String username) {
-        return cartRepository.findByUsername(username)
-                .orElseGet(() -> cartRepository.save(ShoppingCart.builder()
-                        .username(username)
-                        .items(new ArrayList<>())
-                        .grandTotal(BigDecimal.ZERO)
-                        .totalItemCount(0)
-                        .lastUpdated(LocalDateTime.now())
-                        .build()));
+    public Cart getOrCreateCart(String username) {
+        return cartRepository.findByUsername(username.toLowerCase().trim())
+                .orElseGet(() -> {
+                    Cart c = Cart.builder()
+                            .username(username.toLowerCase().trim())
+                            .items(new ArrayList<>())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+                    return cartRepository.save(c);
+                });
     }
 
-    public ShoppingCart addToCart(String username, String productId, int quantity) {
-        MarketplaceProduct product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    public Cart addToCart(String username, String itemId, int quantity) {
+        ProductServiceItem product = productRepository.findById(itemId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product/Service not found"));
 
-        if (product.getStockQuantity() < 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item is currently out of stock");
-        }
+        Cart cart = getOrCreateCart(username);
+        
+        CartItem existing = cart.getItems().stream()
+                .filter(i -> i.getItemId().equals(itemId))
+                .findFirst()
+                .orElse(null);
 
-        ShoppingCart cart = getOrCreateCart(username);
-        Optional<CartItem> existing = cart.getItems().stream()
-                .filter(i -> i.getProductId().equals(productId))
-                .findFirst();
-
-        int qtyToAdd = quantity > 0 ? quantity : 1;
-
-        if (existing.isPresent()) {
-            CartItem item = existing.get();
-            item.setQuantity(item.getQuantity() + qtyToAdd);
-            item.setItemTotal(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+        if (existing != null) {
+            existing.setQuantity(existing.getQuantity() + quantity);
         } else {
-            String imgUrl = (product.getImageUrls() != null && !product.getImageUrls().isEmpty())
-                    ? product.getImageUrls().get(0) : "";
+            String imgUrl = (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) 
+                    ? product.getImageUrls().get(0) 
+                    : "";
 
             CartItem newItem = CartItem.builder()
-                    .productId(product.getId())
+                    .itemId(product.getId())
                     .title(product.getTitle())
-                    .category(product.getCategory().name())
-                    .sellerUsername(product.getSellerUsername())
+                    .vendorUsername(product.getVendorUsername())
+                    .businessName(product.getBusinessName())
+                    .category(product.getCategory())
+                    .unitPrice(product.getPrice())
+                    .priceUnit(product.getPriceUnit())
+                    .quantity(Math.max(1, quantity))
                     .imageUrl(imgUrl)
-                    .unitPrice(product.getUnitPrice())
-                    .quantity(qtyToAdd)
-                    .itemTotal(product.getUnitPrice().multiply(BigDecimal.valueOf(qtyToAdd)))
                     .build();
             cart.getItems().add(newItem);
         }
 
-        recalculateCart(cart);
+        cart.setUpdatedAt(LocalDateTime.now());
         return cartRepository.save(cart);
     }
 
-    public ShoppingCart updateItemQuantity(String username, String productId, int delta) {
-        ShoppingCart cart = getOrCreateCart(username);
-        Optional<CartItem> existing = cart.getItems().stream()
-                .filter(i -> i.getProductId().equals(productId))
-                .findFirst();
+    public Cart updateItemQuantity(String username, String itemId, int quantity) {
+        Cart cart = getOrCreateCart(username);
 
-        if (existing.isPresent()) {
-            CartItem item = existing.get();
-            int newQty = item.getQuantity() + delta;
-            if (newQty <= 0) {
-                cart.getItems().remove(item);
-            } else {
-                item.setQuantity(newQty);
-                item.setItemTotal(item.getUnitPrice().multiply(BigDecimal.valueOf(newQty)));
-            }
-            recalculateCart(cart);
-            return cartRepository.save(cart);
+        if (quantity <= 0) {
+            cart.getItems().removeIf(i -> i.getItemId().equals(itemId));
+        } else {
+            cart.getItems().stream()
+                    .filter(i -> i.getItemId().equals(itemId))
+                    .findFirst()
+                    .ifPresent(i -> i.setQuantity(quantity));
         }
-        return cart;
+
+        cart.setUpdatedAt(LocalDateTime.now());
+        return cartRepository.save(cart);
     }
 
-    public ShoppingCart removeItem(String username, String productId) {
-        ShoppingCart cart = getOrCreateCart(username);
-        cart.getItems().removeIf(i -> i.getProductId().equals(productId));
-        recalculateCart(cart);
-        return cartRepository.save(cart);
+    public Cart removeFromCart(String username, String itemId) {
+        return updateItemQuantity(username, itemId, 0);
     }
 
     public void clearCart(String username) {
-        ShoppingCart cart = getOrCreateCart(username);
+        Cart cart = getOrCreateCart(username);
         cart.getItems().clear();
-        cart.setGrandTotal(BigDecimal.ZERO);
-        cart.setTotalItemCount(0);
-        cart.setLastUpdated(LocalDateTime.now());
+        cart.setUpdatedAt(LocalDateTime.now());
         cartRepository.save(cart);
     }
 
-    public MarketplaceOrder checkoutOrder(String username, String buyerName, String phone, String address, String paymentMethod) {
-        ShoppingCart cart = getOrCreateCart(username);
+    public Order checkout(String username, String fullName, String phone, String streetAddress, String city, String state, String postalCode) {
+        Cart cart = getOrCreateCart(username);
         if (cart.getItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shopping cart is empty");
         }
 
-        MarketplaceOrder order = MarketplaceOrder.builder()
-                .buyerUsername(username)
-                .buyerName(buyerName)
-                .contactPhone(phone)
-                .shippingAddress(address)
+        // Auto-save address to user profile if user has no address configured
+        User user = userRepository.findByUsername(username.toLowerCase().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (user.getLocation() == null || user.getLocation().isBlank()) {
+            user.setLocation(city + ", " + state);
+            userRepository.save(user);
+        }
+
+        String orderNum = "ASMJ-ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        Order order = Order.builder()
+                .orderNumber(orderNum)
+                .buyerUsername(user.getUsername())
+                .buyerFullName(fullName)
+                .buyerPhone(phone)
+                .streetAddress(streetAddress)
+                .city(city)
+                .state(state)
+                .postalCode(postalCode)
                 .items(new ArrayList<>(cart.getItems()))
-                .totalAmount(cart.getGrandTotal())
-                .paymentMethod(paymentMethod != null ? paymentMethod : "DIRECT_INVOICE")
+                .totalAmount(cart.getTotalAmount())
                 .orderStatus("CONFIRMED")
-                .placedAt(LocalDateTime.now())
+                .orderDate(LocalDateTime.now())
                 .build();
 
-        MarketplaceOrder savedOrder = orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
 
-        // Open chat threads with sellers automatically
+        // Notify vendors automatically via chat
         for (CartItem item : cart.getItems()) {
-            if (item.getSellerUsername() != null && !item.getSellerUsername().equalsIgnoreCase(username)) {
-                try {
-                    Conversation convo = directMessageService.getOrCreateDirectConversation(username, item.getSellerUsername());
-                    String orderMsg = String.format("🛍️ Order #%s Placed!\nItem: %s (Qty: %d, ₹%s).\nShipping: %s\nPhone: %s",
-                            savedOrder.getId().substring(Math.max(0, savedOrder.getId().length() - 6)),
-                            item.getTitle(), item.getQuantity(), item.getItemTotal(), address, phone);
-                    directMessageService.sendMessage(username, convo.getId(), orderMsg, null);
-                } catch (Exception e) {
-                    log.error("Failed to notify seller @{}: {}", item.getSellerUsername(), e.getMessage());
-                }
+            try {
+                var convo = directMessageService.getOrCreateDirectConversation(username, item.getVendorUsername());
+                String msg = String.format("🎉 New Order [%s]: Placed order for '%s' (Qty: %d, ₹%s). Shipping to: %s, %s.",
+                        orderNum, item.getTitle(), item.getQuantity(), item.getSubtotal(), streetAddress, city);
+                directMessageService.sendMessage(username, convo.getId(), msg, null);
+            } catch (Exception ignored) {
             }
         }
 
@@ -153,15 +155,7 @@ public class CartService {
         return savedOrder;
     }
 
-    private void recalculateCart(ShoppingCart cart) {
-        BigDecimal total = BigDecimal.ZERO;
-        int count = 0;
-        for (CartItem item : cart.getItems()) {
-            total = total.add(item.getItemTotal());
-            count += item.getQuantity();
-        }
-        cart.setGrandTotal(total);
-        cart.setTotalItemCount(count);
-        cart.setLastUpdated(LocalDateTime.now());
+    public List<Order> getUserOrders(String username) {
+        return orderRepository.findByBuyerUsernameOrderByOrderDateDesc(username.toLowerCase().trim());
     }
 }

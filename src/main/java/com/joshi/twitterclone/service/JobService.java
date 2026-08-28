@@ -1,6 +1,5 @@
 package com.joshi.twitterclone.service;
 
-import com.joshi.twitterclone.model.Conversation;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.jobs.ApplicationStatus;
 import com.joshi.twitterclone.model.jobs.JobApplication;
@@ -12,13 +11,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,113 +22,101 @@ import java.util.stream.Collectors;
 public class JobService {
 
     private final JobListingRepository jobListingRepository;
-    private final JobApplicationRepository applicationRepository;
+    private final JobApplicationRepository jobApplicationRepository;
     private final UserService userService;
-    private final DirectMessageService directMessageService;
-    private final FileStorageService fileStorageService;
 
-    public JobListing createJobListing(String username, JobListing listing, String skillsCommaSeparated, MultipartFile logo) {
+    public JobListing createJob(String username, JobListing job) {
         User user = userService.getUserByUsername(username);
 
-        listing.setPosterUsername(user.getUsername());
-        listing.setPosterDisplayName(user.getDisplayName());
-        listing.setStatus(ListingStatus.APPROVED);
-        listing.setApplicantCount(0);
-        listing.setCreatedAt(LocalDateTime.now());
+        job.setPosterUsername(user.getUsername());
+        job.setPosterDisplayName(user.getDisplayName());
+        job.setStatus(ListingStatus.PENDING_APPROVAL);
+        job.setCreatedAt(LocalDateTime.now());
+        job.setApplicantCount(0);
 
-        if (skillsCommaSeparated != null && !skillsCommaSeparated.isBlank()) {
-            List<String> skills = Arrays.stream(skillsCommaSeparated.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.toList());
-            listing.setRequiredSkills(skills);
-        }
-
-        if (logo != null && !logo.isEmpty()) {
-            listing.setCompanyLogoUrl(fileStorageService.saveImageOptimized(logo));
-        }
-
-        return jobListingRepository.save(listing);
+        return jobListingRepository.save(job);
     }
 
-    public List<JobListing> getAvailableJobs(String city) {
-        if (city != null && !city.isBlank()) {
-            return jobListingRepository.findByStatusAndLocationCityIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, city);
+    public JobListing updateJob(String username, String jobId, JobListing updated) {
+        JobListing job = jobListingRepository.findById(jobId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
+
+        if (!job.getPosterUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to edit this job");
         }
-        return jobListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+
+        job.setJobTitle(updated.getJobTitle());
+        job.setCompanyName(updated.getCompanyName());
+        job.setEmploymentType(updated.getEmploymentType());
+        job.setWorkplaceType(updated.getWorkplaceType());
+        job.setLocationCity(updated.getLocationCity());
+        job.setMinSalary(updated.getMinSalary());
+        job.setMaxSalary(updated.getMaxSalary());
+        job.setJobDescription(updated.getJobDescription());
+        job.setRequirements(updated.getRequirements());
+        job.setRequiredSkills(updated.getRequiredSkills());
+        job.setStatus(ListingStatus.PENDING_APPROVAL); // Re-trigger moderation on update
+
+        return jobListingRepository.save(job);
     }
 
-    public List<JobListing> getJobsPostedBy(String username) {
+    public void deleteJob(String username, String jobId) {
+        JobListing job = jobListingRepository.findById(jobId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
+
+        if (!job.getPosterUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to delete this job");
+        }
+
+        jobListingRepository.delete(job);
+    }
+
+    public List<JobListing> getApprovedJobs(String city, String keyword) {
+        List<JobListing> all = jobListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+        return all.stream()
+                .filter(j -> city == null || city.isBlank() || j.getLocationCity().equalsIgnoreCase(city.trim()))
+                .filter(j -> keyword == null || keyword.isBlank() 
+                        || j.getJobTitle().toLowerCase().contains(keyword.toLowerCase().trim())
+                        || j.getCompanyName().toLowerCase().contains(keyword.toLowerCase().trim()))
+                .toList();
+    }
+
+    public List<JobListing> getMyPostedJobs(String username) {
         return jobListingRepository.findByPosterUsernameOrderByCreatedAtDesc(username);
     }
 
-    public JobApplication submitApplication(String applicantUsername, String jobId, String fullName, String email, 
-                                            String phone, int experienceYears, String coverLetter, MultipartFile resumeFile) {
+    public List<JobListing> getPendingJobs() {
+        return jobListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);
+    }
+
+    public void moderateJob(String jobId, boolean approve, String rejectionReason) {
         JobListing job = jobListingRepository.findById(jobId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job listing not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
 
-        if (applicationRepository.findByJobIdAndApplicantUsername(jobId, applicantUsername).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You have already applied to this position.");
+        job.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
+        if (!approve) {
+            job.setRejectionReason(rejectionReason);
         }
+        jobListingRepository.save(job);
+    }
 
-        String resumeUrl = null;
-        if (resumeFile != null && !resumeFile.isEmpty()) {
-            resumeUrl = fileStorageService.saveFile(resumeFile);
-        }
+    public JobApplication applyForJob(String applicantUsername, String jobId, JobApplication app) {
+        JobListing job = jobListingRepository.findById(jobId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
 
-        JobApplication application = JobApplication.builder()
-                .jobId(jobId)
-                .jobTitle(job.getJobTitle())
-                .companyName(job.getCompanyName())
-                .posterUsername(job.getPosterUsername())
-                .applicantUsername(applicantUsername)
-                .applicantFullName(fullName)
-                .applicantEmail(email)
-                .applicantPhone(phone)
-                .yearsOfExperience(experienceYears)
-                .coverLetterNote(coverLetter)
-                .resumeUrl(resumeUrl)
-                .status(ApplicationStatus.SUBMITTED)
-                .appliedAt(LocalDateTime.now())
-                .build();
+        User user = userService.getUserByUsername(applicantUsername);
 
-        JobApplication saved = applicationRepository.save(application);
+        app.setJobId(job.getId());
+        app.setJobTitle(job.getJobTitle());
+        app.setCompanyName(job.getCompanyName());
+        app.setPosterUsername(job.getPosterUsername());
+        app.setApplicantUsername(user.getUsername());
+        app.setStatus(ApplicationStatus.APPLIED);
+        app.setAppliedAt(LocalDateTime.now());
 
         job.setApplicantCount(job.getApplicantCount() + 1);
         jobListingRepository.save(job);
 
-        // Open chat stream between applicant and recruiter
-        Conversation convo = directMessageService.getOrCreateDirectConversation(applicantUsername, job.getPosterUsername());
-        String notificationMessage = String.format("Hello! I submitted an application for the '%s' position at %s. Looking forward to discussing this opportunity!",
-                job.getJobTitle(), job.getCompanyName());
-        directMessageService.sendMessage(applicantUsername, convo.getId(), notificationMessage, null);
-
-        return saved;
-    }
-
-    public List<JobApplication> getApplicationsForRecruiter(String recruiterUsername) {
-        return applicationRepository.findByPosterUsernameOrderByAppliedAtDesc(recruiterUsername);
-    }
-
-    public List<JobApplication> getApplicationsByApplicant(String applicantUsername) {
-        return applicationRepository.findByApplicantUsernameOrderByAppliedAtDesc(applicantUsername);
-    }
-
-    public void updateApplicationStatus(String applicationId, String recruiterUsername, ApplicationStatus newStatus) {
-        JobApplication application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Application not found"));
-
-        if (!application.getPosterUsername().equalsIgnoreCase(recruiterUsername)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to update this application");
-        }
-
-        application.setStatus(newStatus);
-        applicationRepository.save(application);
-
-        // Automated notification to candidate
-        Conversation convo = directMessageService.getOrCreateDirectConversation(recruiterUsername, application.getApplicantUsername());
-        String updateMsg = String.format("Update regarding your application for %s at %s: Status changed to [%s].",
-                application.getJobTitle(), application.getCompanyName(), newStatus.name().replace("_", " "));
-        directMessageService.sendMessage(recruiterUsername, convo.getId(), updateMsg, null);
+        return jobApplicationRepository.save(app);
     }
 }

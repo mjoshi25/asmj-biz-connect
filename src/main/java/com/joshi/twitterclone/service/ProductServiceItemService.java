@@ -1,10 +1,10 @@
 package com.joshi.twitterclone.service;
 
-import com.joshi.twitterclone.model.Conversation;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.marketplace.ListingStatus;
 import com.joshi.twitterclone.model.products.ItemCategory;
 import com.joshi.twitterclone.model.products.ProductServiceItem;
+import com.joshi.twitterclone.repository.UserRepository;
 import com.joshi.twitterclone.repository.products.ProductServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,43 +23,74 @@ import java.util.List;
 public class ProductServiceItemService {
 
     private final ProductServiceRepository itemRepository;
-    private final UserService userService;
-    private final DirectMessageService directMessageService;
+    private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final DirectMessageService directMessageService;
 
     public ProductServiceItem createListing(String username, ProductServiceItem item, List<MultipartFile> images) {
-        User user = userService.getUserByUsername(username);
+        User user = userRepository.findByUsername(username.toLowerCase().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         item.setVendorUsername(user.getUsername());
         item.setVendorDisplayName(user.getDisplayName());
         item.setStatus(ListingStatus.PENDING_APPROVAL);
         item.setCreatedAt(LocalDateTime.now());
 
-        List<String> uploadedUrls = new ArrayList<>();
-        if (images != null) {
-            for (MultipartFile img : images) {
-                if (!img.isEmpty()) {
-                    uploadedUrls.add(fileStorageService.saveImageOptimized(img));
+        if (images != null && !images.isEmpty()) {
+            List<String> urls = new ArrayList<>();
+            for (MultipartFile file : images) {
+                if (file != null && !file.isEmpty()) {
+                    urls.add(fileStorageService.saveImageOptimized(file));
                 }
             }
+            item.setImageUrls(urls);
         }
-        item.setImageUrls(uploadedUrls);
 
         return itemRepository.save(item);
     }
 
-    public List<ProductServiceItem> getApprovedItems(ItemCategory category, String city) {
-        if (city != null && !city.isBlank()) {
-            return itemRepository.findByStatusAndLocationCityIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, city.trim());
+    public ProductServiceItem updateListing(String username, String itemId, ProductServiceItem updated) {
+        ProductServiceItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found"));
+
+        if (!item.getVendorUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to edit this listing");
         }
-        if (category != null) {
-            return itemRepository.findByStatusAndCategoryOrderByCreatedAtDesc(ListingStatus.APPROVED, category);
-        }
-        return itemRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+
+        item.setTitle(updated.getTitle());
+        item.setBusinessName(updated.getBusinessName());
+        item.setCategory(updated.getCategory());
+        item.setPrice(updated.getPrice());
+        item.setPriceUnit(updated.getPriceUnit());
+        item.setLocationCity(updated.getLocationCity());
+        item.setContactNumber(updated.getContactNumber());
+        item.setDescription(updated.getDescription());
+        item.setStatus(ListingStatus.PENDING_APPROVAL);
+
+        return itemRepository.save(item);
     }
 
-    public List<ProductServiceItem> getVendorListings(String username) {
-        return itemRepository.findByVendorUsernameOrderByCreatedAtDesc(username);
+    public void deleteListing(String username, String itemId) {
+        ProductServiceItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found"));
+
+        if (!item.getVendorUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to delete this listing");
+        }
+
+        itemRepository.delete(item);
+    }
+
+    public List<ProductServiceItem> getApprovedItems(ItemCategory category, String city) {
+        List<ProductServiceItem> items = itemRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+        return items.stream()
+                .filter(i -> category == null || i.getCategory() == category)
+                .filter(i -> city == null || city.isBlank() || (i.getLocationCity() != null && i.getLocationCity().equalsIgnoreCase(city.trim())))
+                .toList();
+    }
+
+    public List<ProductServiceItem> getVendorListings(String vendorUsername) {
+        return itemRepository.findByVendorUsernameOrderByCreatedAtDesc(vendorUsername.toLowerCase().trim());
     }
 
     public List<ProductServiceItem> getPendingItems() {
@@ -77,12 +108,19 @@ public class ProductServiceItemService {
         itemRepository.save(item);
     }
 
-    public void sendInquiry(String buyerUsername, String itemId, String inquiryMessage) {
+    public void sendInquiry(String inquirerUsername, String itemId, String inquiryMessage) {
         ProductServiceItem item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found"));
 
-        Conversation convo = directMessageService.getOrCreateDirectConversation(buyerUsername, item.getVendorUsername());
-        String fullMsg = String.format("Inquiry regarding '%s' (₹%s): %s", item.getTitle(), item.getPrice(), inquiryMessage);
-        directMessageService.sendMessage(buyerUsername, convo.getId(), fullMsg, null);
+        var conversation = directMessageService.getOrCreateDirectConversation(inquirerUsername, item.getVendorUsername());
+
+        String initialMessage = String.format("👋 Inquiry regarding '%s' (Category: %s, Price: ₹%s %s): %s",
+                item.getTitle(),
+                item.getCategory(),
+                item.getPrice(),
+                item.getPriceUnit() != null ? item.getPriceUnit() : "",
+                inquiryMessage);
+
+        directMessageService.sendMessage(inquirerUsername, conversation.getId(), initialMessage, null);
     }
 }

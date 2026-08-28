@@ -64,7 +64,9 @@ public class MarketplaceController {
         return "redirect:/products-services/manage";
     }
 
-    // --- Product & Service Posting from Marketplace Tab ---
+    // ==========================================
+    // PRODUCTS & SERVICES (POST FROM TAB)
+    // ==========================================
 
     @PostMapping("/products/post")
     public String postProductService(@AuthenticationPrincipal UserDetails userDetails,
@@ -74,7 +76,9 @@ public class MarketplaceController {
         return "redirect:/marketplace?tab=products&posted=true";
     }
 
-    // --- Vehicle Rental Endpoints ---
+    // ==========================================
+    // VEHICLE RENTALS (CRUD & BOOKING)
+    // ==========================================
 
     @PostMapping("/vehicles/post")
     public String postVehicle(@AuthenticationPrincipal UserDetails userDetails,
@@ -82,6 +86,21 @@ public class MarketplaceController {
                               @RequestParam(value = "images", required = false) List<MultipartFile> images) {
         marketplaceService.createVehicleListing(userDetails.getUsername(), listing, images);
         return "redirect:/marketplace?tab=vehicles&posted=true";
+    }
+
+    @PostMapping("/vehicles/update/{id}")
+    public String updateVehicle(@AuthenticationPrincipal UserDetails userDetails,
+                                @PathVariable("id") String vehicleId,
+                                @ModelAttribute VehicleListing listing) {
+        marketplaceService.updateVehicle(userDetails.getUsername(), vehicleId, listing);
+        return "redirect:/marketplace?tab=vehicles&updated=true";
+    }
+
+    @PostMapping("/vehicles/delete/{id}")
+    public String deleteVehicle(@AuthenticationPrincipal UserDetails userDetails,
+                                @PathVariable("id") String vehicleId) {
+        marketplaceService.deleteVehicle(userDetails.getUsername(), vehicleId);
+        return "redirect:/marketplace?tab=vehicles&deleted=true";
     }
 
     @PostMapping("/vehicles/book")
@@ -95,7 +114,9 @@ public class MarketplaceController {
         return "redirect:/messages";
     }
 
-    // --- Insurance Policy & Quote Endpoints ---
+    // ==========================================
+    // CORPORATE INSURANCE (CRUD & QUOTING)
+    // ==========================================
 
     @PostMapping("/insurance/post")
     public String postInsuranceAd(@AuthenticationPrincipal UserDetails userDetails,
@@ -104,6 +125,21 @@ public class MarketplaceController {
                                   @RequestParam(value = "brochure", required = false) MultipartFile brochure) {
         marketplaceService.createInsuranceAd(userDetails.getUsername(), ad, banner, brochure);
         return "redirect:/marketplace?tab=insurance&posted=true";
+    }
+
+    @PostMapping("/insurance/update/{id}")
+    public String updateInsurance(@AuthenticationPrincipal UserDetails userDetails,
+                                  @PathVariable("id") String adId,
+                                  @ModelAttribute InsuranceAd ad) {
+        marketplaceService.updateInsuranceAd(userDetails.getUsername(), adId, ad);
+        return "redirect:/marketplace?tab=insurance&updated=true";
+    }
+
+    @PostMapping("/insurance/delete/{id}")
+    public String deleteInsurance(@AuthenticationPrincipal UserDetails userDetails,
+                                  @PathVariable("id") String adId) {
+        marketplaceService.deleteInsuranceAd(userDetails.getUsername(), adId);
+        return "redirect:/marketplace?tab=insurance&deleted=true";
     }
 
     @PostMapping("/insurance/quote")
@@ -118,7 +154,9 @@ public class MarketplaceController {
         return "redirect:/messages";
     }
 
-    // --- Admin Moderation Endpoints ---
+    // ==========================================
+    // ADMIN MODERATION
+    // ==========================================
 
     @GetMapping("/admin/moderation")
     @PreAuthorize("hasRole('ADMIN')")

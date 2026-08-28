@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shopping Bag & Checkout / ASMJ Biz Connect</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased overflow-x-hidden">
+
+    <div class="max-w-[1400px] mx-auto flex justify-center min-h-screen">
+        
+        <!-- Navigation -->
+        <div th:replace="~{fragments/navigation :: left-nav(activeTab='cart')}"></div>
+
+        <main class="w-full md:max-w-2xl lg:max-w-3xl xl:max-w-4xl border-x border-zinc-800/80 min-h-screen pt-14 md:pt-0 pb-24">
+            
+            <!-- Header -->
+            <div class="sticky top-14 md:top-0 bg-[#080c14]/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-3 sm:px-6 sm:py-4 z-20 flex items-center justify-between">
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-white leading-tight">Shopping Bag & Orders</h1>
+                    <p class="text-[11px] sm:text-xs text-zinc-500">Review assets, manage deliveries, and confirm B2B procurements</p>
+                </div>
+                <a th:href="@{/marketplace(tab='products')}" class="text-xs text-sky-400 hover:underline">&larr; Continue Shopping</a>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-6">
+                
+                <!-- Order Confirmation Banner -->
+                <div th:if="${param.ordered}" class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center space-x-3 text-xs text-emerald-300">
+                    <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Order placed successfully! Vendors have been notified and direct messaging rooms have been created.</span>
+                </div>
+
+                <!-- Bag Items Section -->
+                <section class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-sm font-bold text-white uppercase tracking-wider">
+                            My Bag (<span th:text="${cart.totalItemCount}">0</span> items)
+                        </h2>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(cart.items)}" class="p-12 text-center text-zinc-500 text-xs border border-zinc-900 rounded-3xl bg-zinc-950/40 space-y-2">
+                        <p class="text-sm text-zinc-400 font-bold">Your bag is empty</p>
+                        <p>Browse products and enterprise services to add items to your cart.</p>
+                        <a th:href="@{/marketplace(tab='products')}" class="inline-block mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition">
+                            Explore Marketplace
+                        </a>
+                    </div>
+
+                    <!-- Cart Item Rows -->
+                    <div th:unless="${#lists.isEmpty(cart.items)}" class="space-y-3">
+                        <div th:each="item : ${cart.items}" class="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            
+                            <div class="flex items-center space-x-3.5 min-w-0">
+                                <img th:if="${item.imageUrl != null and !item.imageUrl.isEmpty()}" th:src="${item.imageUrl}" class="w-14 h-14 rounded-xl object-cover border border-zinc-800 shrink-0" />
+                                <div th:unless="${item.imageUrl != null and !item.imageUrl.isEmpty()}" class="w-14 h-14 rounded-xl bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 shrink-0">Item</div>
+                                
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-sm text-white truncate" th:text="${item.title}">Product Title</h3>
+                                    <span class="text-xs text-zinc-500 block truncate" th:text="|Vendor: ${item.businessName} (@${item.vendorUsername})|">Vendor</span>
+                                    <span class="text-xs font-bold text-emerald-400 block" th:text="|₹${item.unitPrice} ${item.priceUnit != null ? item.priceUnit : ''}|">₹0</span>
+                                </div>
+                            </div>
+
+                            <!-- Quantity & Action -->
+                            <div class="flex items-center justify-between w-full sm:w-auto space-x-4">
+                                <form th:action="@{/cart/update}" method="post" class="flex items-center space-x-1.5 bg-zinc-950 border border-zinc-800 rounded-xl p-1">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <input type="hidden" name="itemId" th:value="${item.itemId}" />
+                                    <button type="submit" name="quantity" th:value="${item.quantity - 1}" class="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white font-bold">&minus;</button>
+                                    <span class="text-xs font-bold px-2 text-white" th:text="${item.quantity}">1</span>
+                                    <button type="submit" name="quantity" th:value="${item.quantity + 1}" class="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white font-bold">&plus;</button>
+                                </form>
+
+                                <span class="font-bold text-sm text-white w-24 text-right" th:text="|₹${item.subtotal}|">₹0</span>
+
+                                <form th:action="@{/cart/remove}" method="post">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <input type="hidden" name="itemId" th:value="${item.itemId}" />
+                                    <button type="submit" class="text-zinc-500 hover:text-rose-400 p-1.5 transition" title="Remove item">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Subtotal & Checkout Card -->
+                        <div class="p-5 bg-gradient-to-r from-zinc-900 to-zinc-950 border border-zinc-800 rounded-3xl space-y-4">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-zinc-400">Total Procurement Amount:</span>
+                                <strong class="text-2xl font-black text-emerald-400" th:text="|₹${cart.totalAmount}|">₹0</strong>
+                            </div>
+
+                            <button type="button" 
+                                    onclick="openCheckoutModal()"
+                                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-blue-500/25 active:scale-95">
+                                Proceed to Checkout & Shipping
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Order History Section -->
+                <section class="space-y-4 pt-4 border-t border-zinc-800/80">
+                    <h2 class="text-sm font-bold text-white uppercase tracking-wider">
+                        My Order History (<span th:text="${#lists.size(orders)}">0</span>)
+                    </h2>
+
+                    <div th:if="${#lists.isEmpty(orders)}" class="p-6 text-center text-zinc-500 text-xs">
+                        No orders placed yet.
+                    </div>
+
+                    <div class="space-y-3">
+                        <div th:each="order : ${orders}" class="p-4 bg-zinc-900/40 border border-zinc-800 rounded-2xl space-y-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-bold text-xs text-white" th:text="${order.orderNumber}">ORD-1234</span>
+                                    <span class="text-[11px] text-zinc-500 block" th:text="${order.formattedDate}">Date</span>
+                                </div>
+                                <span class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full" th:text="${order.orderStatus}">CONFIRMED</span>
+                            </div>
+
+                            <div class="text-xs text-zinc-400 space-y-1 pl-2 border-l-2 border-zinc-800">
+                                <p th:text="|📍 Deliver to: ${order.buyerFullName}, ${order.streetAddress}, ${order.city} - ${order.postalCode}|">Address</p>
+                                <p th:text="|📞 Contact: ${order.buyerPhone}|">Phone</p>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs pt-2 border-t border-zinc-800/60">
+                                <span class="text-zinc-500" th:text="|${order.items.size()} item(s)|">1 item</span>
+                                <strong class="text-emerald-400 font-bold" th:text="|₹${order.totalAmount}|">₹0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: Checkout & Instant Delivery Address Capture -->
+    <div id="checkout-modal" class="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <div>
+                    <h3 class="font-bold text-sm text-white">Confirm Order & Shipping Address</h3>
+                    <p class="text-[11px] text-zinc-500">Provide shipping details to finalize procurement</p>
+                </div>
+                <button type="button" onclick="document.getElementById('checkout-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <form th:action="@{/cart/checkout}" method="post" class="space-y-3 text-xs">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Full Legal Name</label>
+                        <input type="text" name="fullName" th:value="${currentUser != null ? currentUser.displayName : ''}" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Contact Mobile</label>
+                        <input type="text" name="phone" placeholder="+91 9876543210" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-zinc-400 mb-1">Street / Delivery Address</label>
+                    <input type="text" name="streetAddress" placeholder="Floor, Building, Road, Area" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">City</label>
+                        <input type="text" name="city" placeholder="Bengaluru" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">State</label>
+                        <input type="text" name="state" placeholder="Karnataka" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Postal Code</label>
+                        <input type="text" name="postalCode" placeholder="560001" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-zinc-800 flex justify-between items-center">
+                    <span class="text-zinc-400">Total Payable:</span>
+                    <span class="text-base font-bold text-emerald-400" th:text="|₹${cart.totalAmount}|">₹0</span>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 font-bold text-white py-3 rounded-xl transition shadow-md active:scale-95">
+                    Place Order & Send Shipping Details
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openCheckoutModal() {
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

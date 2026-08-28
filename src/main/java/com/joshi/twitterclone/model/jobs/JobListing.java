@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,11 +34,13 @@ public class JobListing {
     private String jobTitle;
     private EmploymentType employmentType;
     private WorkplaceType workplaceType;
-    
     private String locationCity;
+
     private BigDecimal minSalary;
     private BigDecimal maxSalary;
-    private String salaryCurrency;
+
+    @Builder.Default
+    private String salaryCurrency = "INR";
 
     private String jobDescription;
     private String requirements;
@@ -46,11 +49,17 @@ public class JobListing {
     private List<String> requiredSkills = new ArrayList<>();
 
     @Builder.Default
-    private ListingStatus status = ListingStatus.APPROVED;
+    private ListingStatus status = ListingStatus.PENDING_APPROVAL;
+    private String rejectionReason;
 
     @Builder.Default
     private int applicantCount = 0;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public String getFormattedDate() {
+        if (createdAt == null) return "";
+        return createdAt.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+    }
 }

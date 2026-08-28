@@ -1,9 +1,12 @@
 package com.joshi.twitterclone.service;
 
-import com.joshi.twitterclone.model.Conversation;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.marketplace.*;
-import com.joshi.twitterclone.repository.marketplace.*;
+import com.joshi.twitterclone.repository.UserRepository;
+import com.joshi.twitterclone.repository.marketplace.InsuranceAdRepository;
+import com.joshi.twitterclone.repository.marketplace.InsuranceQuoteRepository;
+import com.joshi.twitterclone.repository.marketplace.VehicleBookingRepository;
+import com.joshi.twitterclone.repository.marketplace.VehicleListingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -12,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -24,128 +26,147 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MarketplaceService {
 
-    private final VehicleListingRepository vehicleRepository;
-    private final VehicleBookingRepository bookingRepository;
+    private final VehicleListingRepository vehicleListingRepository;
+    private final VehicleBookingRepository vehicleBookingRepository;
     private final InsuranceAdRepository insuranceAdRepository;
-    private final InsuranceQuoteRepository quoteRepository;
-    private final MarketplaceProductRepository productRepository;
-    private final UserService userService;
-    private final DirectMessageService directMessageService;
+    private final InsuranceQuoteRepository insuranceQuoteRepository;
+    private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final DirectMessageService directMessageService;
 
-    // --- PRODUCTS & SERVICES ---
-
-    public MarketplaceProduct createProduct(String username, MarketplaceProduct product, List<MultipartFile> images) {
-        User user = userService.getUserByUsername(username);
-        product.setSellerUsername(user.getUsername());
-        product.setSellerDisplayName(user.getDisplayName());
-        product.setStatus(ListingStatus.PENDING_APPROVAL);
-        product.setCreatedAt(LocalDateTime.now());
-
-        if (product.getShelfAisle() == null || product.getShelfAisle().isBlank()) {
-            product.setShelfAisle("Aisle 1 - Featured Products");
-        }
-
-        List<String> uploadedUrls = new ArrayList<>();
-        if (images != null) {
-            for (MultipartFile img : images) {
-                if (!img.isEmpty()) {
-                    uploadedUrls.add(fileStorageService.saveImageOptimized(img));
-                }
-            }
-        }
-        product.setImageUrls(uploadedUrls);
-        return productRepository.save(product);
-    }
-
-    public List<MarketplaceProduct> getApprovedProducts(ProductCategory category) {
-        if (category != null) {
-            return productRepository.findByStatusAndCategoryOrderByCreatedAtDesc(ListingStatus.APPROVED, category);
-        }
-        return productRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
-    }
-
-    public List<MarketplaceProduct> getPendingProducts() {
-        return productRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);
-    }
-
-    public void moderateProduct(String productId, boolean approve, String rejectionReason) {
-        MarketplaceProduct product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-        product.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
-        if (!approve) product.setRejectionReason(rejectionReason);
-        productRepository.save(product);
-    }
-
-    // --- VEHICLES ---
+    // ==========================================
+    // VEHICLE RENTALS
+    // ==========================================
 
     public VehicleListing createVehicleListing(String username, VehicleListing listing, List<MultipartFile> images) {
-        User user = userService.getUserByUsername(username);
-        listing.setOwnerUsername(user.getUsername());
-        listing.setOwnerDisplayName(user.getDisplayName());
+        User owner = userRepository.findByUsername(username.toLowerCase().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        listing.setOwnerUsername(owner.getUsername());
+        listing.setOwnerDisplayName(owner.getDisplayName());
         listing.setStatus(ListingStatus.PENDING_APPROVAL);
         listing.setCreatedAt(LocalDateTime.now());
 
-        List<String> uploadedUrls = new ArrayList<>();
-        if (images != null) {
-            for (MultipartFile img : images) {
-                if (!img.isEmpty()) {
-                    uploadedUrls.add(fileStorageService.saveImageOptimized(img));
+        if (images != null && !images.isEmpty()) {
+            List<String> imageUrls = new ArrayList<>();
+            for (MultipartFile file : images) {
+                if (file != null && !file.isEmpty()) {
+                    imageUrls.add(fileStorageService.saveImageOptimized(file));
                 }
             }
+            listing.setImageUrls(imageUrls);
         }
-        listing.setImageUrls(uploadedUrls);
-        return vehicleRepository.save(listing);
+
+        return vehicleListingRepository.save(listing);
+    }
+
+    public VehicleListing updateVehicle(String username, String vehicleId, VehicleListing updated) {
+        VehicleListing listing = vehicleListingRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle listing not found"));
+
+        if (!listing.getOwnerUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to edit this vehicle listing");
+        }
+
+        listing.setMake(updated.getMake());
+        listing.setModelName(updated.getModelName());
+        listing.setYear(updated.getYear());
+        listing.setVehicleType(updated.getVehicleType());
+        listing.setFuelType(updated.getFuelType());
+        listing.setTransmission(updated.getTransmission());
+        listing.setSeatingCapacity(updated.getSeatingCapacity());
+        listing.setDailyRentalRate(updated.getDailyRentalRate());
+        listing.setSecurityDeposit(updated.getSecurityDeposit());
+        listing.setLocationCity(updated.getLocationCity());
+        listing.setPickupAddress(updated.getPickupAddress());
+        listing.setDescription(updated.getDescription());
+        listing.setStatus(ListingStatus.PENDING_APPROVAL); // Re-trigger moderation on update
+
+        return vehicleListingRepository.save(listing);
+    }
+
+    public void deleteVehicle(String username, String vehicleId) {
+        VehicleListing listing = vehicleListingRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle listing not found"));
+
+        if (!listing.getOwnerUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to delete this vehicle listing");
+        }
+
+        vehicleListingRepository.delete(listing);
     }
 
     public List<VehicleListing> getApprovedVehicles(String city) {
-        if (city != null && !city.isBlank()) {
-            return vehicleRepository.findByStatusAndLocationCityIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, city.trim());
+        List<VehicleListing> all = vehicleListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+        if (city == null || city.isBlank()) {
+            return all;
         }
-        return vehicleRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+        return all.stream()
+                .filter(v -> v.getLocationCity() != null && v.getLocationCity().equalsIgnoreCase(city.trim()))
+                .toList();
+    }
+
+    public List<VehicleListing> getPendingVehicles() {
+        return vehicleListingRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);
+    }
+
+    public void moderateVehicle(String vehicleId, boolean approve, String rejectionReason) {
+        VehicleListing listing = vehicleListingRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle listing not found"));
+
+        listing.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
+        if (!approve) {
+            listing.setRejectionReason(rejectionReason);
+        }
+        vehicleListingRepository.save(listing);
     }
 
     public VehicleBooking bookVehicle(String renterUsername, String listingId, LocalDate startDate, LocalDate endDate, String phone, String license) {
-        VehicleListing vehicle = vehicleRepository.findById(listingId)
+        VehicleListing vehicle = vehicleListingRepository.findById(listingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle listing not found"));
 
-        if (vehicle.getStatus() != ListingStatus.APPROVED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Listing is not available for booking");
+        if (endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date cannot be prior to start date");
         }
 
-        long days = ChronoUnit.DAYS.between(startDate, endDate);
-        if (days <= 0) days = 1;
-
-        BigDecimal totalAmount = vehicle.getDailyRentalRate().multiply(BigDecimal.valueOf(days));
+        long days = Math.max(1, ChronoUnit.DAYS.between(startDate, endDate));
+        BigDecimal total = vehicle.getDailyRentalRate().multiply(BigDecimal.valueOf(days));
 
         VehicleBooking booking = VehicleBooking.builder()
-                .listingId(listingId)
-                .vehicleSummary(vehicle.getYear() + " " + vehicle.getMake() + " " + vehicle.getModelName())
+                .listingId(vehicle.getId())
+                .vehicleSummary(String.format("%d %s %s", vehicle.getYear(), vehicle.getMake(), vehicle.getModelName()))
                 .renterUsername(renterUsername)
                 .ownerUsername(vehicle.getOwnerUsername())
                 .startDate(startDate)
                 .endDate(endDate)
-                .totalDays(days)
-                .totalAmount(totalAmount)
+                .totalDays((int) days)
+                .totalAmount(total)
                 .customerPhone(phone)
                 .drivingLicenseNumber(license)
                 .bookingStatus("CONFIRMED")
                 .bookedAt(LocalDateTime.now())
                 .build();
 
-        Conversation convo = directMessageService.getOrCreateDirectConversation(renterUsername, vehicle.getOwnerUsername());
-        directMessageService.sendMessage(renterUsername, convo.getId(), 
-                "Hello! I have booked your " + booking.getVehicleSummary() + " from " + startDate + " to " + endDate + ". Looking forward to pickup!", null);
+        VehicleBooking saved = vehicleBookingRepository.save(booking);
 
-        return bookingRepository.save(booking);
+        var convo = directMessageService.getOrCreateDirectConversation(renterUsername, vehicle.getOwnerUsername());
+        String msg = String.format("🚗 New Vehicle Booking: %s (%s to %s, %d days, Total: ₹%s). Contact: %s. License: %s.",
+                booking.getVehicleSummary(), startDate, endDate, days, total, phone, license);
+        directMessageService.sendMessage(renterUsername, convo.getId(), msg, null);
+
+        return saved;
     }
 
-    // --- INSURANCE ---
+    // ==========================================
+    // CORPORATE INSURANCE
+    // ==========================================
 
     public InsuranceAd createInsuranceAd(String username, InsuranceAd ad, MultipartFile banner, MultipartFile brochure) {
-        User user = userService.getUserByUsername(username);
-        ad.setInsurerUsername(user.getUsername());
-        ad.setInsurerDisplayName(user.getDisplayName());
+        User insurer = userRepository.findByUsername(username.toLowerCase().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        ad.setInsurerUsername(insurer.getUsername());
+        ad.setInsurerDisplayName(insurer.getDisplayName());
         ad.setStatus(ListingStatus.PENDING_APPROVAL);
         ad.setCreatedAt(LocalDateTime.now());
 
@@ -153,76 +174,92 @@ public class MarketplaceService {
             ad.setBannerImageUrl(fileStorageService.saveImageOptimized(banner));
         }
         if (brochure != null && !brochure.isEmpty()) {
-            ad.setBrochureUrl(fileStorageService.saveFile(brochure));
+            ad.setBrochurePdfUrl(fileStorageService.saveFile(brochure));
         }
 
         return insuranceAdRepository.save(ad);
+    }
+
+    public InsuranceAd updateInsuranceAd(String username, String adId, InsuranceAd updated) {
+        InsuranceAd ad = insuranceAdRepository.findById(adId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance ad not found"));
+
+        if (!ad.getInsurerUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to edit this insurance ad");
+        }
+
+        ad.setTitle(updated.getTitle());
+        ad.setProviderCompany(updated.getProviderCompany());
+        ad.setInsuranceType(updated.getInsuranceType());
+        ad.setBaseAnnualPremium(updated.getBaseAnnualPremium());
+        ad.setCoverageAmount(updated.getCoverageAmount());
+        ad.setPolicyHighlights(updated.getPolicyHighlights());
+        ad.setStatus(ListingStatus.PENDING_APPROVAL); // Re-trigger moderation on update
+
+        return insuranceAdRepository.save(ad);
+    }
+
+    public void deleteInsuranceAd(String username, String adId) {
+        InsuranceAd ad = insuranceAdRepository.findById(adId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance ad not found"));
+
+        if (!ad.getInsurerUsername().equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to delete this insurance ad");
+        }
+
+        insuranceAdRepository.delete(ad);
     }
 
     public List<InsuranceAd> getApprovedInsuranceAds() {
         return insuranceAdRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
     }
 
-    public InsuranceQuote calculateAndRequestQuote(String username, String adId, String name, String email, String phone, int age, BigDecimal estimatedValue) {
-        InsuranceAd ad = insuranceAdRepository.findById(adId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance Ad not found"));
-
-        BigDecimal multiplier = BigDecimal.valueOf(0.035);
-        if (ad.getInsuranceType() == InsuranceType.HEALTH_INDIVIDUAL || ad.getInsuranceType() == InsuranceType.HEALTH_FAMILY) {
-            multiplier = age > 45 ? BigDecimal.valueOf(0.055) : BigDecimal.valueOf(0.028);
-        }
-
-        BigDecimal calculatedPremium = (estimatedValue != null && estimatedValue.compareTo(BigDecimal.ZERO) > 0)
-                ? estimatedValue.multiply(multiplier).setScale(2, RoundingMode.HALF_UP)
-                : ad.getBaseAnnualPremium();
-
-        Conversation convo = directMessageService.getOrCreateDirectConversation(username, ad.getInsurerUsername());
-        String initialMsg = String.format("Hi! I generated an online quote for '%s'. Estimated Sum Insured: ₹%s. Estimated Premium: ₹%s/yr. Let's discuss policy terms.",
-                ad.getTitle(), estimatedValue != null ? estimatedValue : "Standard", calculatedPremium);
-        directMessageService.sendMessage(username, convo.getId(), initialMsg, null);
-
-        InsuranceQuote quote = InsuranceQuote.builder()
-                .adId(adId)
-                .adTitle(ad.getTitle())
-                .insurerUsername(ad.getInsurerUsername())
-                .applicantUsername(username)
-                .applicantName(name)
-                .applicantEmail(email)
-                .applicantPhone(phone)
-                .applicantAge(age)
-                .estimatedValueOrSumInsured(estimatedValue)
-                .calculatedQuotePremium(calculatedPremium)
-                .status("GENERATED")
-                .associatedConversationId(convo.getId())
-                .requestedAt(LocalDateTime.now())
-                .build();
-
-        return quoteRepository.save(quote);
-    }
-
-    // --- MODERATION ---
-
-    public List<VehicleListing> getPendingVehicles() {
-        return vehicleRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);
-    }
-
     public List<InsuranceAd> getPendingInsuranceAds() {
         return insuranceAdRepository.findByStatusOrderByCreatedAtDesc(ListingStatus.PENDING_APPROVAL);
     }
 
-    public void moderateVehicle(String vehicleId, boolean approve, String rejectionReason) {
-        VehicleListing vehicle = vehicleRepository.findById(vehicleId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle not found"));
-        vehicle.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
-        if (!approve) vehicle.setRejectionReason(rejectionReason);
-        vehicleRepository.save(vehicle);
-    }
-
     public void moderateInsuranceAd(String adId, boolean approve, String rejectionReason) {
         InsuranceAd ad = insuranceAdRepository.findById(adId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance Ad not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance ad not found"));
+
         ad.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
-        if (!approve) ad.setRejectionReason(rejectionReason);
+        if (!approve) {
+            ad.setRejectionReason(rejectionReason);
+        }
         insuranceAdRepository.save(ad);
+    }
+
+    public InsuranceQuote calculateAndRequestQuote(String applicantUsername, String adId, String name, String email, String phone, int age, BigDecimal estimatedValue) {
+        InsuranceAd ad = insuranceAdRepository.findById(adId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Insurance ad not found"));
+
+        BigDecimal calculatedPremium = ad.getBaseAnnualPremium();
+        if (estimatedValue != null && estimatedValue.compareTo(BigDecimal.ZERO) > 0) {
+            calculatedPremium = calculatedPremium.add(estimatedValue.multiply(BigDecimal.valueOf(0.025)));
+        }
+
+        InsuranceQuote quote = InsuranceQuote.builder()
+                .adId(ad.getId())
+                .adTitle(ad.getTitle())
+                .insurerUsername(ad.getInsurerUsername())
+                .applicantUsername(applicantUsername)
+                .applicantName(name)
+                .applicantEmail(email)
+                .applicantPhone(phone)
+                .applicantAge(age)
+                .estimatedValueOrSumInsured(estimatedValue != null ? estimatedValue : BigDecimal.ZERO)
+                .calculatedQuotePremium(calculatedPremium)
+                .status("GENERATED")
+                .requestedAt(LocalDateTime.now())
+                .build();
+
+        InsuranceQuote saved = insuranceQuoteRepository.save(quote);
+
+        var convo = directMessageService.getOrCreateDirectConversation(applicantUsername, ad.getInsurerUsername());
+        String msg = String.format("🛡️ Insurance Quote Request for '%s': Base Cover: ₹%s. Declared Base Value: ₹%s. Estimated Premium: ₹%s/year. Applicant: %s (%s, Phone: %s, Age: %d).",
+                ad.getTitle(), ad.getCoverageAmount(), quote.getEstimatedValueOrSumInsured(), calculatedPremium, name, email, phone, age);
+        directMessageService.sendMessage(applicantUsername, convo.getId(), msg, null);
+
+        return saved;
     }
 }

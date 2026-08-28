@@ -1,4 +1,4 @@
-package com.joshi.twitterclone.model.jobs;
+package com.joshi.twitterclone.model;
 
 public enum ApplicationStatus {
     APPLIED,
