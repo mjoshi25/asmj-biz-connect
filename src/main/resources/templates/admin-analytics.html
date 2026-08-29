@@ -3,215 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Executive Analytics & Control / ASMJ Biz Connect</title>
+    <title>Admin Dashboard / ASMJ Biz Connect</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
-    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico(v=2)}" />
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
 <body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
 
-    <div class="max-w-7xl mx-auto space-y-8">
+    <div class="max-w-6xl mx-auto space-y-8">
         
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
             <div>
-                <h1 class="text-2xl font-black text-white tracking-tight">Platform Analytics & Control Center</h1>
-                <p class="text-xs text-zinc-400">Enterprise aggregated transaction volume, platform health, and moderation pipeline</p>
+                <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Admin Moderation & User Management</h1>
+                <p class="text-xs text-zinc-500">Monitor users, suspend/activate accounts, and moderate event workflows</p>
             </div>
-            <a th:href="@{/home}" class="text-xs text-sky-400 hover:underline">&larr; Back to App</a>
+            
+            <div class="flex items-center gap-3">
+                <a th:href="@{/events}" class="text-xs text-sky-400 hover:underline font-semibold">&larr; Back to Events</a>
+                <a th:href="@{/marketplace}" class="text-xs text-zinc-400 hover:text-white font-semibold">Platform Hub</a>
+            </div>
         </div>
 
-        <!-- Metric Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase">Registered Users</span>
+        <!-- Metrics Overview Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-1">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Registered Users</p>
                 <p class="text-2xl font-black text-white" th:text="${stats.totalUsers}">0</p>
             </div>
-
-            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase">Vehicle Rental GMV</span>
-                <p class="text-2xl font-black text-emerald-400" th:text="|₹${stats.totalVehicleRentalVolume}|">₹0</p>
+            <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-1">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Event Summits</p>
+                <p class="text-2xl font-black text-white" th:text="${stats.totalEvents}">0</p>
             </div>
-
-            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase">Event Pass Revenue</span>
-                <p class="text-2xl font-black text-indigo-400" th:text="|₹${stats.totalEventTicketRevenue}|">₹0</p>
-            </div>
-
-            <div class="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl space-y-1">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase">Pending Approvals</span>
-                <p class="text-2xl font-black text-amber-400" th:text="${stats.pendingVehicles + stats.pendingInsuranceAds + stats.pendingProductsServices + #lists.size(pendingJobs)}">0</p>
+            <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-1">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Ticket Bookings</p>
+                <p class="text-2xl font-black text-white" th:text="${stats.totalBookings}">0</p>
             </div>
         </div>
 
-        <!-- Domain Statistics Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="p-5 bg-zinc-900/40 border border-zinc-800/80 rounded-3xl space-y-3">
-                <h3 class="font-bold text-sm text-white">Vehicles & Mobility</h3>
-                <div class="text-xs space-y-2 text-zinc-300">
-                    <div class="flex justify-between"><span>Active Vehicles:</span><strong th:text="${stats.totalVehicles}">0</strong></div>
-                    <div class="flex justify-between"><span>Pending Review:</span><strong class="text-amber-400" th:text="${stats.pendingVehicles}">0</strong></div>
-                    <div class="flex justify-between"><span>Completed Bookings:</span><strong th:text="${stats.totalVehicleBookings}">0</strong></div>
-                </div>
-            </div>
+        <!-- USER MANAGEMENT DIRECTORY SECTION -->
+        <div class="space-y-4">
+            <h2 class="text-sm font-bold text-sky-400 uppercase tracking-wider">Platform User Directory (Suspend / Activate Control)</h2>
 
-            <div class="p-5 bg-zinc-900/40 border border-zinc-800/80 rounded-3xl space-y-3">
-                <h3 class="font-bold text-sm text-white">Insurance & Quotes</h3>
-                <div class="text-xs space-y-2 text-zinc-300">
-                    <div class="flex justify-between"><span>Active Ads:</span><strong th:text="${stats.totalInsuranceAds}">0</strong></div>
-                    <div class="flex justify-between"><span>Pending Review:</span><strong class="text-amber-400" th:text="${stats.pendingInsuranceAds}">0</strong></div>
-                    <div class="flex justify-between"><span>Quotes Generated:</span><strong th:text="${stats.totalInsuranceQuotes}">0</strong></div>
-                </div>
-            </div>
-
-            <div class="p-5 bg-zinc-900/40 border border-zinc-800/80 rounded-3xl space-y-3">
-                <h3 class="font-bold text-sm text-white">Recruitment & Events</h3>
-                <div class="text-xs space-y-2 text-zinc-300">
-                    <div class="flex justify-between"><span>Open Roles:</span><strong th:text="${stats.totalJobs}">0</strong></div>
-                    <div class="flex justify-between"><span>Pending Job Approvals:</span><strong class="text-purple-400" th:text="${#lists.size(pendingJobs)}">0</strong></div>
-                    <div class="flex justify-between"><span>Job Applications:</span><strong th:text="${stats.totalJobApplications}">0</strong></div>
+            <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-zinc-950 text-zinc-400 uppercase font-bold border-b border-zinc-800">
+                            <tr>
+                                <th class="p-3">Username</th>
+                                <th class="p-3">Display Name</th>
+                                <th class="p-3">Email</th>
+                                <th class="p-3">Roles</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-800">
+                            <tr th:if="${usersList == null || #lists.isEmpty(usersList)}">
+                                <td colspan="6" class="p-6 text-center text-zinc-500">No registered users found.</td>
+                            </tr>
+                            <tr th:each="usr : ${usersList}" class="hover:bg-zinc-800/40 transition">
+                                <td class="p-3 font-semibold text-white" th:text="|@${usr.username}|">username</td>
+                                <td class="p-3 text-zinc-300" th:text="${usr.displayName}">Name</td>
+                                <td class="p-3 text-zinc-400" th:text="${usr.email}">Email</td>
+                                <td class="p-3 text-indigo-400 font-mono" th:text="${usr.roles}">Roles</td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" 
+                                          th:classappend="${usr.enabled} ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-red-950 text-red-400 border border-red-800'"
+                                          th:text="${usr.enabled} ? 'ACTIVE' : 'DISABLED'">Active</span>
+                                </td>
+                                <td class="p-3 text-right">
+                                    <form th:action="@{/admin/users/{username}/toggle(username=${usr.username})}" method="post" class="inline">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                        <button type="submit" class="px-3 py-1 rounded-xl text-[11px] font-bold transition shadow"
+                                                th:classappend="${usr.enabled} ? 'bg-red-950 hover:bg-red-900 text-red-400 border border-red-800' : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800'"
+                                                th:text="${usr.enabled} ? 'Suspend' : 'Activate'">
+                                            Toggle
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Moderation Sections -->
+        <!-- PENDING EVENTS SECTION -->
+        <div class="space-y-4 pt-4 border-t border-zinc-800">
+            <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Pending Event Summits Awaiting Moderation</h2>
 
-        <!-- 1. Pending Job Postings -->
-        <section class="space-y-4">
-            <h2 class="text-sm font-bold text-purple-400 uppercase tracking-wider">Pending Job Openings (<span th:text="${#lists.size(pendingJobs)}">0</span>)</h2>
-            <div th:if="${#lists.isEmpty(pendingJobs)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
-                No job requisitions waiting for review.
+            <div th:if="${pendingEvents == null || #lists.isEmpty(pendingEvents)}" class="p-6 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                No pending event submissions require review right now.
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="j : ${pendingJobs}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-sm text-white" th:text="${j.jobTitle}">Job Title</h3>
-                            <span class="text-xs text-zinc-500" th:text="|Company: ${j.companyName} (Poster: @${j.posterUsername})|">Company</span>
-                        </div>
-                        <span class="text-xs font-bold text-emerald-400" th:text="|₹${j.minSalary} - ₹${j.maxSalary}|">Salary</span>
-                    </div>
-                    <p class="text-xs text-zinc-300 line-clamp-2" th:text="${j.jobDescription}">Description</p>
-                    <span class="text-[11px] text-zinc-500 block" th:text="|📍 ${j.locationCity} · Format: ${j.workplaceType} · ${j.employmentType}|">Details</span>
 
-                    <div class="flex space-x-2 pt-2 border-t border-zinc-800">
-                        <form th:action="|/jobs/admin/${j.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="true" />
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Approve</button>
-                        </form>
-                        <form th:action="|/jobs/admin/${j.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="false" />
-                            <input type="hidden" name="rejectionReason" value="Requisition did not meet compliance requirements" />
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Reject</button>
-                        </form>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" th:if="${pendingEvents != null && !#lists.isEmpty(pendingEvents)}">
+                <div th:each="ev : ${pendingEvents}" class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] font-bold bg-amber-950 text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-800">PENDING REVIEW</span>
+                            <span class="text-xs font-semibold text-zinc-400" th:text="|🏢 @${ev.organizerUsername}|">Organizer</span>
+                        </div>
+                        <h3 class="font-bold text-base text-white" th:text="${ev.title}">Title</h3>
+                        <p class="text-xs text-zinc-400 line-clamp-2" th:text="${ev.description}">Description</p>
                     </div>
+
+                    <!-- Moderation Actions Form -->
+                    <form th:action="@{/events/admin/{id}/moderate(id=${ev.id})}" method="post" class="space-y-3 pt-3 border-t border-zinc-800">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="text" name="rejectionReason" placeholder="Rejection reason (required if rejecting)..." 
+                               class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2 text-xs text-white focus:border-sky-500 focus:outline-none" />
+                        
+                        <div class="flex gap-2">
+                            <button type="submit" name="approve" value="true" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition">
+                                Approve
+                            </button>
+                            <button type="submit" name="approve" value="false" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl text-xs transition">
+                                Reject
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- 2. Products & Services -->
-        <section class="space-y-4">
-            <h2 class="text-sm font-bold text-sky-400 uppercase tracking-wider">Pending Products & Services (<span th:text="${#lists.size(pendingProducts)}">0</span>)</h2>
-            <div th:if="${#lists.isEmpty(pendingProducts)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
-                No products or services waiting for review.
+        <!-- APPROVED / ACTIVE EVENTS SECTION -->
+        <div class="space-y-4 pt-6 border-t border-zinc-800">
+            <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Active Approved Summits (Revocation Control)</h2>
+
+            <div th:if="${approvedEvents == null || #lists.isEmpty(approvedEvents)}" class="p-6 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                No active approved summits found.
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="p : ${pendingProducts}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-sm text-white" th:text="${p.title}">Title</h3>
-                            <span class="text-xs text-zinc-500" th:text="|Vendor: @${p.vendorUsername} (${p.businessName})|">Vendor</span>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" th:if="${approvedEvents != null && !#lists.isEmpty(approvedEvents)}">
+                <div th:each="ev : ${approvedEvents}" class="bg-zinc-900/60 border border-emerald-950/40 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] font-bold bg-emerald-950 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-800">APPROVED</span>
+                            <span class="text-xs font-semibold text-zinc-400" th:text="|🏢 @${ev.organizerUsername}|">Organizer</span>
                         </div>
-                        <span class="text-xs font-bold text-emerald-400" th:text="|₹${p.price} ${p.priceUnit != null ? p.priceUnit : ''}|">Price</span>
+                        <h3 class="font-bold text-base text-white" th:text="${ev.title}">Title</h3>
+                        <p class="text-xs text-zinc-400 line-clamp-2" th:text="${ev.description}">Description</p>
                     </div>
-                    <p class="text-xs text-zinc-300" th:text="${p.description}">Desc</p>
-                    <div class="flex space-x-2 pt-2 border-t border-zinc-800">
-                        <form th:action="|/products-services/admin/${p.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="true" />
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Approve</button>
-                        </form>
-                        <form th:action="|/products-services/admin/${p.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="false" />
-                            <input type="hidden" name="rejectionReason" value="Incomplete listing specifications" />
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Reject</button>
-                        </form>
-                    </div>
+
+                    <!-- Revoke Approval Form -->
+                    <form th:action="@{/events/admin/{id}/revoke(id=${ev.id})}" method="post" class="space-y-3 pt-3 border-t border-zinc-800">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="text" name="rejectionReason" required placeholder="Reason to revoke approval..." 
+                               class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2 text-xs text-white focus:border-amber-500 focus:outline-none" />
+                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs transition">
+                            Revoke Approval & Reject
+                        </button>
+                    </form>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- 3. Vehicle Rentals -->
-        <section class="space-y-4">
-            <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Pending Vehicle Rentals (<span th:text="${#lists.size(pendingVehicles)}">0</span>)</h2>
-            <div th:if="${#lists.isEmpty(pendingVehicles)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
-                No vehicles waiting for review.
+        <!-- REJECTED EVENTS SECTION -->
+        <div class="space-y-4 pt-6 border-t border-zinc-800">
+            <h2 class="text-sm font-bold text-red-400 uppercase tracking-wider">Rejected Event Postings</h2>
+            
+            <div th:if="${rejectedEvents == null || #lists.isEmpty(rejectedEvents)}" class="p-6 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                No rejected event postings found.
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="v : ${pendingVehicles}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-3">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" th:if="${rejectedEvents != null && !#lists.isEmpty(rejectedEvents)}">
+                <div th:each="ev : ${rejectedEvents}" class="bg-zinc-900/60 border border-red-950/60 rounded-2xl p-5 space-y-3">
                     <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-sm text-white" th:text="|${v.year} ${v.make} ${v.modelName}|">Car</h3>
-                            <span class="text-xs text-zinc-500" th:text="|Owner: @${v.ownerUsername} (${v.contactNumber})|">Owner</span>
-                        </div>
-                        <span class="text-xs font-bold text-white" th:text="|₹${v.dailyRentalRate}/day|">Rate</span>
+                        <h3 class="font-bold text-sm text-white" th:text="${ev.title}">Title</h3>
+                        <span class="text-[10px] bg-red-950 text-red-400 px-2.5 py-0.5 rounded-full border border-red-800">REJECTED</span>
                     </div>
-                    <p class="text-xs text-zinc-300" th:text="${v.description}">Desc</p>
-                    <div class="flex space-x-2 pt-2 border-t border-zinc-800">
-                        <form th:action="|/marketplace/admin/vehicles/${v.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="true" />
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Approve</button>
-                        </form>
-                        <form th:action="|/marketplace/admin/vehicles/${v.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="false" />
-                            <input type="hidden" name="rejectionReason" value="Incomplete vehicle documentation" />
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Reject</button>
-                        </form>
-                    </div>
+                    <p class="text-xs text-zinc-400" th:text="|Organizer: @${ev.organizerUsername}|">Organizer</p>
+                    <p class="text-xs text-red-300 bg-red-950/30 p-2.5 rounded-xl border border-red-900/50" th:text="|Reason: ${ev.rejectionReason}|">Reason</p>
                 </div>
             </div>
-        </section>
-
-        <!-- 4. Insurance Ads -->
-        <section class="space-y-4">
-            <h2 class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Pending Insurance Ads (<span th:text="${#lists.size(pendingAds)}">0</span>)</h2>
-            <div th:if="${#lists.isEmpty(pendingAds)}" class="p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
-                No insurance policies waiting for review.
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="ad : ${pendingAds}" class="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-sm text-white" th:text="${ad.title}">Title</h3>
-                            <span class="text-xs text-zinc-500" th:text="|Agency: ${ad.providerCompany} (@${ad.insurerUsername})|">Agency</span>
-                        </div>
-                        <span class="text-xs font-bold text-emerald-400" th:text="|Coverage: ₹${ad.coverageAmount}|">Coverage</span>
-                    </div>
-                    <div class="flex space-x-2 pt-2 border-t border-zinc-800">
-                        <form th:action="|/marketplace/admin/insurance/${ad.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="true" />
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Approve</button>
-                        </form>
-                        <form th:action="|/marketplace/admin/insurance/${ad.id}/moderate|" method="post" class="flex-1">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <input type="hidden" name="approve" value="false" />
-                            <input type="hidden" name="rejectionReason" value="Policy does not meet compliance standards" />
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-xl text-xs transition">Reject</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </section>
+        </div>
 
     </div>
-
 </body>
 </html>

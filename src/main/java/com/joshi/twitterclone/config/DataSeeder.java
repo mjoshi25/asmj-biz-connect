@@ -54,7 +54,6 @@ public class DataSeeder implements CommandLineRunner {
     private final JobListingRepository jobListingRepository;
     private final JobApplicationRepository jobApplicationRepository;
     private final EventListingRepository eventListingRepository;
-    private final EventBookingRepository eventBookingRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -805,25 +804,6 @@ public class DataSeeder implements CommandLineRunner {
                     .build();
 
             eventListingRepository.saveAll(List.of(e1, e2, e3, e4, e5));
-
-            if (eventBookingRepository.count() == 0) {
-                EventBooking booking = EventBooking.builder()
-                        .eventId(e1.getId())
-                        .eventTitle(e1.getTitle())
-                        .organizerUsername(e1.getOrganizerUsername())
-                        .attendeeUsername("john_doe")
-                        .attendeeFullName("John Doe")
-                        .attendeeEmail("john@doelogistics.com")
-                        .attendeePhone("+91 9811223344")
-                        .numberOfTickets(1)
-                        .totalAmount(BigDecimal.valueOf(999.00))
-                        .bookingReference("ASMJ-EVT-9A24C1")
-                        .status(EventBookingStatus.CONFIRMED)
-                        .bookedAt(LocalDateTime.now().minusHours(3))
-                        .build();
-
-                eventBookingRepository.save(booking);
-            }
         }
     }
 

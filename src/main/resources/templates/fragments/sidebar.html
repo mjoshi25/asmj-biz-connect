@@ -1,73 +1,102 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
 <body>
-
-<aside th:fragment="right-sidebar" class="hidden lg:block w-80 xl:w-96 min-h-screen px-4 py-3 space-y-4 shrink-0">
-    
-    <!-- Search Bar -->
-    <div class="sticky top-0 bg-[#080c14]/90 backdrop-blur-md pt-1 pb-3 z-10">
-        <form th:action="@{/explore}" method="get" class="relative flex items-center">
-            <svg class="w-4 h-4 text-zinc-500 absolute left-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" 
-                   name="q" 
-                   placeholder="Search ASMJ Biz Connect" 
-                   class="w-full bg-zinc-900/80 border border-zinc-800 rounded-full pl-11 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition shadow-inner" />
-        </form>
-    </div>
-
-    <!-- Upcoming Events Card (Replaces Follow Box) -->
-    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
-        <div class="flex items-center justify-between px-1">
-            <h2 class="text-sm font-black text-white">Upcoming Events</h2>
-            <a th:href="@{/events}" class="text-[11px] text-sky-400 hover:underline">View All</a>
-        </div>
-        
-        <div class="space-y-2">
-            <div th:each="evt : ${upcomingEvents}" class="p-2.5 bg-zinc-900/70 border border-zinc-800/60 rounded-2xl space-y-1.5 hover:border-zinc-700 transition">
-                <div class="flex items-center justify-between">
-                    <span class="text-[9px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full uppercase" th:text="${evt.eventType}">Type</span>
-                    <span class="text-[10px] text-zinc-500" th:text="${evt.formattedDate}">Date</span>
+    <!-- Left Navigation Fragment -->
+    <div th:fragment="left-nav(activeTab)" class="hidden md:flex flex-col justify-between w-64 p-4 border-r border-zinc-800/80 min-h-screen sticky top-0 bg-[#080c14]">
+        <div class="space-y-6">
+            <!-- Brand -->
+            <div class="flex items-center space-x-3 px-2 py-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-sky-500/20">
+                    A
                 </div>
-                <h4 class="font-bold text-xs text-white truncate" th:text="${evt.title}">Event Title</h4>
-                <div class="flex items-center justify-between pt-1">
-                    <span class="text-[11px] font-bold text-emerald-400" th:text="${evt.ticketPrice == 0 || evt.ticketPrice == null} ? 'Free Entry' : |₹${evt.ticketPrice}|">Free</span>
-                    <a th:href="@{/events}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1 rounded-full text-[10px] transition shadow-sm active:scale-95">
-                        Book
-                    </a>
-                </div>
-            </div>
-
-            <div th:if="${upcomingEvents == null or #lists.isEmpty(upcomingEvents)}" class="text-center py-4 text-xs text-zinc-500">
-                No upcoming events this week.
-            </div>
-        </div>
-    </div>
-
-    <!-- What's Happening Card -->
-    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 space-y-3">
-        <h2 class="text-sm font-black text-white px-1">What's happening</h2>
-        
-        <div class="space-y-1 divide-y divide-zinc-800/40">
-            <div th:each="trend : ${trending}" class="pt-2 pb-1.5 px-1 flex justify-between items-start hover:bg-zinc-800/30 rounded-xl transition cursor-pointer">
                 <div>
-                    <span class="text-[10px] text-zinc-500 block uppercase font-semibold" th:text="${trend.category}">Trending</span>
-                    <a th:href="@{/explore(q='#' + ${trend.hashtag})}" class="font-bold text-xs text-white hover:text-sky-400 transition" th:text="'#' + ${trend.hashtag}">#Topic</a>
-                    <span class="text-[10px] text-zinc-500 block mt-0.5" th:text="${trend.tweetCount + ' posts'}">0 posts</span>
+                    <span class="font-black text-sm tracking-tight text-white block leading-none">ASMJ</span>
+                    <span class="text-[9px] font-bold text-sky-400 tracking-wider uppercase">Biz Connect</span>
                 </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1">
+                <a th:href="@{/marketplace}" class="flex items-center space-x-3 px-4 py-3 rounded-2xl transition text-xs font-semibold"
+                   th:classappend="${activeTab == 'marketplace'} ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    <span>Marketplace</span>
+                </a>
+
+                <a th:href="@{/products-services}" class="flex items-center space-x-3 px-4 py-3 rounded-2xl transition text-xs font-semibold"
+                   th:classappend="${activeTab == 'products'} ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <span>Products & Services</span>
+                </a>
+
+                <a th:href="@{/jobs}" class="flex items-center space-x-3 px-4 py-3 rounded-2xl transition text-xs font-semibold"
+                   th:classappend="${activeTab == 'jobs'} ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span>Job Board</span>
+                </a>
+
+                <a th:href="@{/events}" class="flex items-center space-x-3 px-4 py-3 rounded-2xl transition text-xs font-semibold"
+                   th:classappend="${activeTab == 'events'} ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Events & Summits</span>
+                </a>
+
+                <a th:href="@{/messages}" class="flex items-center space-x-3 px-4 py-3 rounded-2xl transition text-xs font-semibold"
+                   th:classappend="${activeTab == 'messages'} ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    <span>Messages</span>
+                </a>
+
+                <a th:href="@{/notifications}" class="relative flex items-center space-x-3 px-4 py-3 rounded-2xl transition text-xs font-semibold"
+                   th:classappend="${activeTab == 'notifications'} ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span>Notifications</span>
+                    <span th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}" class="absolute right-3 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" th:text="${unreadNotificationCount}">0</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- User Profile Footer -->
+        <div th:if="${currentUser != null}" class="p-3 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs" th:text="${#strings.substring(currentUser.username,0,1).toUpperCase()}">U</div>
+            <div class="overflow-hidden">
+                <p class="text-xs font-bold text-white truncate" th:text="${currentUser.displayName}">User</p>
+                <p class="text-[10px] text-zinc-500 truncate" th:text="|@${currentUser.username}">@username</p>
             </div>
         </div>
     </div>
 
-    <!-- Footer Links -->
-    <div class="px-2 pt-2 text-[11px] text-zinc-500 space-x-2">
-        <a th:href="@{/privacy}" class="hover:underline">Privacy Policy</a>
-        <span>·</span>
-        <span>&copy; 2026 ASMJ Biz Connect</span>
+    <!-- Right Sidebar Fragment -->
+    <div th:fragment="right-sidebar" class="hidden lg:block w-80 p-4 space-y-4 sticky top-0 h-screen overflow-y-auto bg-[#080c14] border-l border-zinc-800/80">
+        
+        <!-- Upcoming Events Widget -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-xs text-white uppercase tracking-wider">Upcoming Events</h3>
+                <a th:href="@{/events}" class="text-[11px] text-sky-400 hover:underline">View All</a>
+            </div>
+
+            <div th:if="${upcomingEvents == null || #lists.isEmpty(upcomingEvents)}" class="text-zinc-500 text-xs py-2">
+                No upcoming events found.
+            </div>
+
+            <div class="space-y-3">
+                <div th:each="ev : ${upcomingEvents}" class="p-3 bg-zinc-950/60 border border-zinc-800/80 rounded-xl space-y-1">
+                    <span class="text-[9px] font-bold text-sky-400 uppercase" th:text="${ev.eventType}">SUMMIT</span>
+                    <h4 class="text-xs font-bold text-white truncate" th:text="${ev.title}">Event Title</h4>
+                    <p class="text-[11px] text-zinc-400" th:text="|📅 ${ev.formattedDate} · 📍 ${ev.city}|">Date & City</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enterprise Network Info -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 space-y-2">
+            <h3 class="font-bold text-xs text-white uppercase tracking-wider">Enterprise Network</h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">Welcome to ASMJ Biz Connect. Explore certified supplier networks, post career vacancies, and host verified corporate summits.</p>
+        </div>
     </div>
-
-</aside>
-
 </body>
 </html>

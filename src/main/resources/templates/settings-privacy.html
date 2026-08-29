@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy & Security Settings / ASMJ Biz Connect</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
+
+    <div class="max-w-3xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <div>
+                <h1 class="text-xl font-black text-white tracking-tight">Privacy & Security Preferences</h1>
+                <p class="text-xs text-zinc-500">Manage account visibility, contact discovery, and communication permissions</p>
+            </div>
+            <a th:href="@{/home}" class="text-xs text-sky-400 hover:underline">&larr; Back to Home</a>
+        </div>
+
+        <!-- Success Alert -->
+        <div th:if="${param.success}" class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs text-emerald-400">
+            Privacy preferences updated successfully!
+        </div>
+
+        <!-- Privacy Form -->
+        <form th:action="@{/settings/privacy/update}" method="post" class="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 space-y-6">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="space-y-4 text-xs">
+                
+                <!-- Private Account Toggle -->
+                <div class="flex items-center justify-between p-4 bg-zinc-950/60 border border-zinc-800 rounded-2xl">
+                    <div class="space-y-0.5">
+                        <label class="font-bold text-white text-sm block">Private Account</label>
+                        <p class="text-zinc-400 text-[11px]">When enabled, only approved network connections can view your profile activity, listings, and posts.</p>
+                    </div>
+                    <input type="checkbox" name="isPrivateAccount" value="true" 
+                           th:checked="${currentUser != null and currentUser.privateAccount}" 
+                           class="w-4 h-4 accent-blue-600 rounded bg-zinc-900 border-zinc-700 cursor-pointer" />
+                </div>
+
+                <!-- Show Email Toggle -->
+                <div class="flex items-center justify-between p-4 bg-zinc-950/60 border border-zinc-800 rounded-2xl">
+                    <div class="space-y-0.5">
+                        <label class="font-bold text-white text-sm block">Public Email Visibility</label>
+                        <p class="text-zinc-400 text-[11px]">Allow verified business partners and marketplace vendors to view your contact email address.</p>
+                    </div>
+                    <input type="checkbox" name="showEmailToPublic" value="true" 
+                           th:checked="${currentUser != null and currentUser.showEmailToPublic}" 
+                           class="w-4 h-4 accent-blue-600 rounded bg-zinc-900 border-zinc-700 cursor-pointer" />
+                </div>
+
+                <!-- Direct Message Permissions -->
+                <div class="flex items-center justify-between p-4 bg-zinc-950/60 border border-zinc-800 rounded-2xl">
+                    <div class="space-y-0.5">
+                        <label class="font-bold text-white text-sm block">Allow Direct Messages from Everyone</label>
+                        <p class="text-zinc-400 text-[11px]">Permit any platform member to send direct connection messages regarding marketplace items or job postings.</p>
+                    </div>
+                    <input type="checkbox" name="allowDirectMessagesFromEveryone" value="true" 
+                           th:checked="${currentUser != null and currentUser.allowDirectMessagesFromEveryone}" 
+                           class="w-4 h-4 accent-blue-600 rounded bg-zinc-900 border-zinc-700 cursor-pointer" />
+                </div>
+
+            </div>
+
+            <div class="pt-4 border-t border-zinc-800 flex justify-end">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg shadow-blue-500/20">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+
+    </div>
+</body>
+</html>

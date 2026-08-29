@@ -11,6 +11,10 @@ import java.util.List;
 @Repository
 public interface EventListingRepository extends MongoRepository<EventListing, String> {
     List<EventListing> findByStatusAndEventDateGreaterThanEqualOrderByEventDateAsc(ListingStatus status, LocalDate date);
-    List<EventListing> findByStatusAndCityIgnoreCaseAndEventDateGreaterThanEqualOrderByEventDateAsc(ListingStatus status, String city, LocalDate date);
-    List<EventListing> findByOrganizerUsernameOrderByCreatedAtDesc(String organizerUsername);
+    List<EventListing> findByOrganizerUsernameOrderByEventDateAsc(String organizerUsername);
+    
+    // Added for Admin Moderation Queue
+    List<EventListing> findByStatusOrderByCreatedAtDesc(ListingStatus status);
+    
+    List<EventListing> findByStatus(ListingStatus status);
 }

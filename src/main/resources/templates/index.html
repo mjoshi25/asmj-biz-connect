@@ -52,7 +52,7 @@
         </div>
     </section>
 
-    <!-- Feature Grid with Rich Imagery -->
+    <!-- Feature Grid -->
     <section class="max-w-7xl mx-auto px-6 py-16 space-y-8">
         <div class="text-center space-y-2">
             <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Core Platform Capabilities</h2>
@@ -61,17 +61,15 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <!-- Feature 1: Marketplace & Bag -->
-            <div class="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6 flex flex-col justify-between min-h-[320px] group">
-                <img src="https://images.unsplash.com/photo-1556742049-0a67d553c253?auto=format&fit=crop&w=800&q=80" 
-                     alt="Marketplace" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" />
-                <div class="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/80 to-transparent"></div>
+            <!-- Feature 1: Marketplace & Bag (Using Stable CSS Gradient Overlay) -->
+            <div class="relative overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-blue-950/60 via-zinc-900 to-zinc-950 p-6 flex flex-col justify-between min-h-[320px] group shadow-xl">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-600/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                 
                 <div class="relative z-10">
-                    <div class="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 shadow-inner">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                     </div>
-                    <h3 class="text-lg font-bold text-white">Enterprise Marketplace & Bag</h3>
+                    <h3 class="text-lg font-bold text-white tracking-tight">Enterprise Marketplace & Bag</h3>
                     <p class="text-xs text-zinc-400 mt-2 leading-relaxed">Procure physical inventory, digital SaaS assets, vehicle rentals, and corporate insurance packages with instant address capture.</p>
                 </div>
                 <div class="relative z-10 pt-4">

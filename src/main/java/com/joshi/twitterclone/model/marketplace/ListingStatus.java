@@ -5,5 +5,6 @@ public enum ListingStatus {
     APPROVED,
     REJECTED,
     BOOKED,
-    CLOSED
+    CLOSED,
+    PENDING
 }

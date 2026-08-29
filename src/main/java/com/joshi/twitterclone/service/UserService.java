@@ -111,4 +111,23 @@ public class UserService {
     public User saveUser(User user) {
         return userRepository.save(user);
     }
+    
+    public void updateUserPrivacyPreferences(String username, boolean isPrivateAccount, boolean showEmailToPublic, boolean allowDirectMessagesFromEveryone) {
+        User user = getUserByUsername(username);
+        user.setPrivateAccount(isPrivateAccount);
+        user.setShowEmailToPublic(showEmailToPublic);
+        user.setAllowDirectMessagesFromEveryone(allowDirectMessagesFromEveryone);
+        userRepository.save(user);
+    }
+    
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public void toggleUserStatus(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setEnabled(!user.isEnabled());
+        userRepository.save(user);
+    }
 }

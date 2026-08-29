@@ -31,42 +31,38 @@ public class EventListing {
     private String organizationName;
 
     private String title;
-    private EventType eventType;
-    private EventFormat eventFormat;
+    private String description;
     
+    private EventType eventType; 
+    private EventFormat eventFormat;
+
     private LocalDate eventDate;
     private LocalTime startTime;
     private LocalTime endTime;
 
-    private String venueLocation;
     private String city;
-    private String virtualJoinLink;
+    private String venueLocation;
 
     private BigDecimal ticketPrice;
     private int totalCapacity;
+    
     @Builder.Default
     private int bookedSeats = 0;
 
-    private String description;
-    private String agendaHighlights;
     private String bannerImageUrl;
 
     @Builder.Default
-    private ListingStatus status = ListingStatus.APPROVED;
+    private ListingStatus status = ListingStatus.PENDING_APPROVAL;
+    
+    private String rejectionReason;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public String getFormattedDate() {
-        if (eventDate == null) return "";
-        return eventDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
-    }
-
-    public int getAvailableSeats() {
-        return Math.max(0, totalCapacity - bookedSeats);
-    }
-
-    public boolean isSoldOut() {
-        return getAvailableSeats() <= 0;
+        if (eventDate != null) {
+            return eventDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+        }
+        return "";
     }
 }
