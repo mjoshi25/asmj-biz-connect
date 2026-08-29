@@ -2,7 +2,9 @@ package com.joshi.twitterclone.controller;
 
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.products.ItemCategory;
+import com.joshi.twitterclone.model.products.ProductListing;
 import com.joshi.twitterclone.model.products.ProductServiceItem;
+import com.joshi.twitterclone.service.FileStorageService;
 import com.joshi.twitterclone.service.ProductServiceItemService;
 import com.joshi.twitterclone.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class ProductServiceController {
 
     private final ProductServiceItemService itemService;
     private final UserService userService;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String viewCatalog(@AuthenticationPrincipal UserDetails userDetails,
@@ -82,5 +85,18 @@ public class ProductServiceController {
                                @RequestParam(value = "rejectionReason", required = false) String reason) {
         itemService.moderateItem(id, approve, reason);
         return "redirect:/admin/analytics";
+    }
+    
+    @PostMapping("/update/{id}")
+    public String updateProduct(@AuthenticationPrincipal UserDetails userDetails,
+                                @PathVariable("id") String id,
+                                @ModelAttribute ProductListing updatedProduct,
+                                @RequestParam(value = "imageFile", required = false) MultipartFile imageFile) {
+        
+        String username = userDetails != null ? userDetails.getUsername() : "";
+        String imageUrl = (imageFile != null && !imageFile.isEmpty()) ? fileStorageService.saveFile(imageFile) : null;
+        
+        itemService.updateProduct(id, username, updatedProduct, imageUrl);
+        return "redirect:/products-services/manage?updated=true";
     }
 }

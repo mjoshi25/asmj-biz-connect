@@ -3,14 +3,19 @@ package com.joshi.twitterclone.controller;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.events.EventListing;
 import com.joshi.twitterclone.service.EventService;
+import com.joshi.twitterclone.service.FileStorageService;
 import com.joshi.twitterclone.service.UserService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 @RequestMapping("/events")
@@ -19,6 +24,7 @@ public class EventController {
 
     private final EventService eventService;
     private final UserService userService;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String viewEvents(@AuthenticationPrincipal UserDetails userDetails,
@@ -58,11 +64,36 @@ public class EventController {
         return "events-manage";
     }
 
-    @PostMapping("/post")
+    @PostMapping({"/post", "/create"})
     public String postEvent(@AuthenticationPrincipal UserDetails userDetails,
-                            @ModelAttribute EventListing event) {
+                            @ModelAttribute EventListing event,
+                            @RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile) {
+        if (bannerFile != null && !bannerFile.isEmpty()) {
+            String cloudinaryUrl = fileStorageService.saveFile(bannerFile);
+            event.setBannerUrl(cloudinaryUrl);
+        }
         eventService.createEvent(userDetails.getUsername(), event);
         return "redirect:/events/manage?posted=true";
+    }
+
+    @PostMapping("/edit/{id}")
+    public String updateEvent(@AuthenticationPrincipal UserDetails userDetails,
+                              @PathVariable("id") String id,
+                              @ModelAttribute EventListing event,
+                              @RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile) {
+        String bannerUrl = null;
+        if (bannerFile != null && !bannerFile.isEmpty()) {
+            bannerUrl = fileStorageService.saveFile(bannerFile);
+        }
+        eventService.updateEvent(id, userDetails.getUsername(), event, bannerUrl);
+        return "redirect:/events/manage?updated=true";
+    }
+
+    @PostMapping("/delete/{id}")
+    public String deleteEvent(@AuthenticationPrincipal UserDetails userDetails,
+                              @PathVariable("id") String id) {
+        eventService.deleteOrganizerEvent(id, userDetails.getUsername());
+        return "redirect:/events/manage?deleted=true";
     }
 
     @PostMapping("/admin/{id}/moderate")
@@ -73,12 +104,27 @@ public class EventController {
         eventService.moderateEvent(id, approve, reason);
         return "redirect:/admin/analytics";
     }
-    
+
     @PostMapping("/admin/{id}/revoke")
     @PreAuthorize("hasRole('ADMIN')")
     public String revokeEventApproval(@PathVariable("id") String id,
                                       @RequestParam(value = "rejectionReason", required = false, defaultValue = "Administrative policy review") String reason) {
         eventService.revokeEventApproval(id, reason);
         return "redirect:/admin/analytics";
+    }
+    
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@AuthenticationPrincipal UserDetails userDetails,
+                               @PathVariable("id") String id,
+                               Model model) {
+        String username = userDetails != null ? userDetails.getUsername() : "";
+        EventListing event = eventService.getEventById(id);
+        
+        if (!event.getOrganizerUsername().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized access");
+        }
+
+        model.addAttribute("event", event);
+        return "event-edit";
     }
 }

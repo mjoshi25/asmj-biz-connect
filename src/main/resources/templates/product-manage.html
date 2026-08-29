@@ -3,139 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendor Dashboard / ASMJ Biz Connect</title>
-    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg(v=2)}" />
+    <title>Manage Product Listings / ASMJ Biz Connect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
 <body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
 
-    <div class="max-w-6xl mx-auto space-y-6">
+    <div class="max-w-5xl mx-auto space-y-8">
         
+        <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
             <div>
-                <h1 class="text-xl font-bold text-white">Vendor Operations Dashboard</h1>
-                <p class="text-xs text-zinc-500">Edit, delete, and monitor moderation statuses for your listings</p>
+                <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Manage Products & Services</h1>
+                <p class="text-xs text-zinc-500">Post and moderate your items for sale or service offerings</p>
             </div>
-            
-            <div class="flex items-center space-x-3">
-                <a th:href="@{/products-services}" class="text-xs text-sky-400 hover:underline">&larr; Back to Catalog</a>
-                <button type="button" 
-                        onclick="document.getElementById('post-item-modal').classList.remove('hidden')"
-                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-md active:scale-95">
-                    + Add New Item
-                </button>
+            <div class="flex items-center gap-3">
+                <a th:href="@{/products-services}" class="text-xs text-sky-400 hover:underline font-semibold">&larr; Back to Marketplace</a>
+                <a th:href="@{/marketplace}" class="text-xs text-zinc-400 hover:text-white font-semibold">Platform Hub</a>
             </div>
         </div>
 
-        <div class="space-y-4">
-            <h2 class="text-sm font-bold text-white">My Posted Products & Services (<span th:text="${#lists.size(myListings)}">0</span>)</h2>
+        <!-- Post New Product Form -->
+        <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6 space-y-4">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">List a Product or Service</h2>
+            
+            <form th:action="@{/products-services/post}" method="post" enctype="multipart/form-data" class="space-y-4">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Item Title</label>
+                        <input type="text" name="title" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none" placeholder="e.g., MacBook Pro M3"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Category</label>
+                        <input type="text" name="category" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none" placeholder="e.g., Electronics"/>
+                    </div>
+                </div>
 
-            <div th:if="${#lists.isEmpty(myListings)}" class="p-12 text-center text-zinc-500 text-xs border border-zinc-900 rounded-3xl bg-zinc-950/40">
-                You haven't posted any items yet.
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Price (₹)</label>
+                        <input type="number" step="0.01" name="price" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none" placeholder="0.00"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Location</label>
+                        <input type="text" name="location" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none" placeholder="e.g., Bengaluru"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Product Image</label>
+                        <input type="file" name="imageFile" accept="image/*" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2 text-xs text-zinc-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-600 file:text-white hover:file:bg-sky-500"/>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Description</label>
+                    <textarea name="description" rows="3" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none" placeholder="Provide specs, condition, and contact details..."></textarea>
+                </div>
+
+                <button type="submit" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition">
+                    Publish Listing
+                </button>
+            </form>
+        </div>
+
+        <!-- My Products List -->
+        <div class="space-y-4">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Your Product & Service Listings</h2>
+
+            <div th:if="${myProducts == null || #lists.isEmpty(myProducts)}" class="p-6 text-center text-zinc-500 text-xs border border-zinc-900 rounded-2xl bg-zinc-950/40">
+                You haven't posted any products or services yet.
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="item : ${myListings}" class="p-5 bg-zinc-900/80 border border-zinc-800 rounded-2xl space-y-3 flex flex-col justify-between">
-                    <div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" th:if="${myProducts != null && !#lists.isEmpty(myProducts)}">
+                <div th:each="prod : ${myProducts}" class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-2">
                         <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-[10px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded uppercase" th:text="${item.category}">Category</span>
-                                <h3 class="font-bold text-sm text-white mt-1" th:text="${item.title}">Title</h3>
-                            </div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                                  th:classappend="${item.status.name() == 'APPROVED'} ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : (${item.status.name() == 'PENDING_APPROVAL'} ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30')"
-                                  th:text="${item.status}">STATUS</span>
+                            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border"
+                                  th:classappend="${prod.status?.name() == 'APPROVED'} ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : (${prod.status?.name() == 'REJECTED'} ? 'bg-red-950 text-red-400 border-red-800' : 'bg-amber-950 text-amber-400 border-amber-800')"
+                                  th:text="${prod.status}">PENDING</span>
+                            <span class="text-xs font-semibold text-sky-400" th:text="|₹${prod.price}|">Price</span>
                         </div>
-
-                        <p class="text-xs text-zinc-300 line-clamp-2 mt-2" th:text="${item.description}">Description</p>
+                        <h3 class="font-bold text-sm text-white" th:text="${prod.title}">Title</h3>
+                        <p class="text-xs text-zinc-400 line-clamp-2" th:text="${prod.description}">Description</p>
                         
-                        <div th:if="${item.rejectionReason != null}" class="mt-2 p-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[11px] text-rose-300">
-                            <strong>Reason:</strong> <span th:text="${item.rejectionReason}">Reason</span>
+                        <div th:if="${prod.status?.name() == 'REJECTED' && prod.rejectionReason != null}" class="text-xs text-red-300 bg-red-950/30 p-2.5 rounded-xl border border-red-900/50">
+                            <span class="font-bold">Rejection Reason:</span> <span th:text="${prod.rejectionReason}">Reason</span>
                         </div>
                     </div>
 
                     <div class="pt-3 border-t border-zinc-800 space-y-3">
-                        <div class="flex items-center justify-between text-xs text-zinc-400">
-                            <span class="font-bold text-emerald-400" th:text="|₹${item.price} ${item.priceUnit != null ? item.priceUnit : ''}|">Price</span>
-                            <span class="text-zinc-500" th:text="${item.formattedDate}">Date</span>
-                        </div>
-
-                        <!-- Edit & Delete Action Buttons -->
-                        <div class="flex space-x-2">
-                            <button type="button"
-                                    th:data-id="${item.id}"
-                                    th:data-title="${item.title}"
-                                    th:data-business="${item.businessName}"
-                                    th:data-price="${item.price}"
-                                    th:data-unit="${item.priceUnit}"
-                                    th:data-city="${item.locationCity}"
-                                    th:data-contact="${item.contactNumber}"
-                                    th:data-desc="${item.description}"
-                                    onclick="openEditModal(this)"
-                                    class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold py-1.5 rounded-xl text-xs transition text-center">
+                        <form th:action="@{/products-services/delete/{id}(id=${prod.id})}" method="post" class="flex gap-2">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            <a th:href="@{/products-services/edit/{id}(id=${prod.id})}" class="flex-1 text-center bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold py-2 rounded-xl text-xs transition">
                                 Edit
+                            </a>
+                            <button type="submit" onclick="return confirm('Delete this listing?');" class="flex-1 bg-red-950/60 hover:bg-red-900 text-red-400 font-bold py-2 rounded-xl text-xs transition border border-red-800">
+                                Delete
                             </button>
-
-                            <form th:action="|/products-services/delete/${item.id}|" method="post" class="flex-1" onsubmit="return confirm('Are you sure you want to delete this listing?');">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                <button type="submit" class="w-full bg-rose-600/10 border border-rose-500/30 hover:bg-rose-600/20 text-rose-400 font-bold py-1.5 rounded-xl text-xs transition">
-                                    Delete
-                                </button>
-                            </form>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
-
-    <!-- MODAL: Edit Listing -->
-    <div id="edit-item-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div class="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
-                <h3 class="font-bold text-sm text-white">Edit Product/Service Listing</h3>
-                <button type="button" onclick="document.getElementById('edit-item-modal').classList.add('hidden')" class="text-zinc-500 hover:text-white">&times;</button>
-            </div>
-
-            <form id="edit-item-form" method="post" class="space-y-3 text-xs">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-
-                <input type="text" name="title" id="edit-title" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
-                <input type="text" name="businessName" id="edit-business" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
-
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="number" step="0.01" name="price" id="edit-price" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
-                    <input type="text" name="priceUnit" id="edit-unit" class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" name="locationCity" id="edit-city" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
-                    <input type="text" name="contactNumber" id="edit-contact" required class="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white" />
-                </div>
-
-                <textarea name="description" id="edit-desc" rows="3" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-white resize-none"></textarea>
-
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 font-bold text-white py-2.5 rounded-xl transition">Save Changes & Resubmit</button>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        function openEditModal(btn) {
-            const id = btn.getAttribute('data-id');
-            document.getElementById('edit-item-form').action = '/products-services/update/' + id;
-            document.getElementById('edit-title').value = btn.getAttribute('data-title');
-            document.getElementById('edit-business').value = btn.getAttribute('data-business');
-            document.getElementById('edit-price').value = btn.getAttribute('data-price');
-            document.getElementById('edit-unit').value = btn.getAttribute('data-unit') || '';
-            document.getElementById('edit-city').value = btn.getAttribute('data-city');
-            document.getElementById('edit-contact').value = btn.getAttribute('data-contact');
-            document.getElementById('edit-desc').value = btn.getAttribute('data-desc');
-
-            document.getElementById('edit-item-modal').classList.remove('hidden');
-        }
-    </script>
 </body>
 </html>

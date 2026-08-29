@@ -3,8 +3,10 @@ package com.joshi.twitterclone.service;
 import com.joshi.twitterclone.model.User;
 import com.joshi.twitterclone.model.marketplace.ListingStatus;
 import com.joshi.twitterclone.model.products.ItemCategory;
+import com.joshi.twitterclone.model.products.ProductListing;
 import com.joshi.twitterclone.model.products.ProductServiceItem;
 import com.joshi.twitterclone.repository.UserRepository;
+import com.joshi.twitterclone.repository.products.ProductListingRepository;
 import com.joshi.twitterclone.repository.products.ProductServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ public class ProductServiceItemService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final DirectMessageService directMessageService;
+    private final ProductListingRepository productRepository;
 
     public ProductServiceItem createListing(String username, ProductServiceItem item, List<MultipartFile> images) {
         User user = userRepository.findByUsername(username.toLowerCase().trim())
@@ -122,5 +125,32 @@ public class ProductServiceItemService {
                 inquiryMessage);
 
         directMessageService.sendMessage(inquirerUsername, conversation.getId(), initialMessage, null);
+    }
+   
+
+    public ProductListing updateProduct(String id, String username, ProductListing updatedProduct, String newImageUrl) {
+        ProductListing existing = productRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product listing not found"));
+
+        if (!existing.getOwnerUsername().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to edit this listing");
+        }
+
+        existing.setTitle(updatedProduct.getTitle());
+        existing.setDescription(updatedProduct.getDescription());
+        existing.setPrice(updatedProduct.getPrice());
+        existing.setCategory(updatedProduct.getCategory());
+        existing.setLocation(updatedProduct.getLocation());
+
+        if (newImageUrl != null && !newImageUrl.isEmpty()) {
+            existing.setImageUrl(newImageUrl);
+        } else if (updatedProduct.getImageUrl() != null && !updatedProduct.getImageUrl().isEmpty()) {
+            existing.setImageUrl(updatedProduct.getImageUrl());
+        }
+
+        existing.setStatus(ListingStatus.PENDING);
+        existing.setRejectionReason(null);
+
+        return productRepository.save(existing);
     }
 }

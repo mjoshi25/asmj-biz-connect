@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Event / ASMJ Biz Connect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+<body class="bg-[#080c14] text-zinc-100 min-h-screen antialiased p-4 sm:p-8">
+
+    <div class="max-w-2xl mx-auto space-y-6">
+        
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <div>
+                <h1 class="text-xl font-black text-white tracking-tight">Edit Event Listing</h1>
+                <p class="text-xs text-zinc-500">Updating details will submit this event for re-moderation</p>
+            </div>
+            <a th:href="@{/events/manage}" class="text-xs text-sky-400 hover:underline font-semibold">&larr; Back to Manage</a>
+        </div>
+
+        <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6">
+            <form th:action="@{/events/edit/{id}(id=${event.id})}" method="post" enctype="multipart/form-data" class="space-y-4">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Event Title</label>
+                        <input type="text" name="title" th:value="${event.title}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Organization Name</label>
+                        <input type="text" name="organizationName" th:value="${event.organizationName}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"/>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Event Type</label>
+                        <input type="text" name="eventType" th:value="${event.eventType}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">City</label>
+                        <input type="text" name="city" th:value="${event.city}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Ticket Price (₹)</label>
+                        <input type="number" step="0.01" name="ticketPrice" th:value="${event.ticketPrice}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"/>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Event Date</label>
+                        <input type="date" name="eventDate" th:value="${event.eventDate}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">New Banner Image (Optional)</label>
+                        <input type="file" name="bannerFile" accept="image/*" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2 text-xs text-zinc-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-600 file:text-white hover:file:bg-sky-500"/>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-zinc-400 uppercase mb-1">Description</label>
+                    <textarea name="description" rows="4" th:text="${event.description}" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition">
+                        Save & Resubmit for Review
+                    </button>
+                    <a th:href="@{/events/manage}" class="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl text-xs text-center transition">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</body>
+</html>

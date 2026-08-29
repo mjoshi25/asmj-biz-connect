@@ -22,43 +22,31 @@ public class EventService {
 
     private final EventListingRepository eventListingRepository;
     private final EventBookingRepository eventBookingRepository;
-    private final NotificationService notificationService;
 
-    public List<EventListing> getAllEvents() {
-        return eventListingRepository.findAll();
+    public List<EventListing> getUpcomingEvents(String city) {
+        List<EventListing> events = eventListingRepository.findAll().stream()
+                .filter(e -> e.getStatus() == ListingStatus.APPROVED)
+                .collect(Collectors.toList());
+
+        if (city != null && !city.trim().isEmpty()) {
+            events = events.stream()
+                    .filter(e -> e.getCity() != null && e.getCity().equalsIgnoreCase(city.trim()))
+                    .collect(Collectors.toList());
+        }
+        return events;
+    }
+
+    // Resolves the getTopUpcomingEvents(int) compilation errors across controllers
+    public List<EventListing> getTopUpcomingEvents(int limit) {
+        return eventListingRepository.findAll().stream()
+                .filter(e -> e.getStatus() == ListingStatus.APPROVED)
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     public EventListing getEventById(String id) {
         return eventListingRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
-    }
-
-    public List<EventListing> getPendingEvents() {
-        return eventListingRepository.findAll().stream()
-                .filter(e -> e.getStatus() == ListingStatus.PENDING)
-                .collect(Collectors.toList());
-    }
-
-    public List<EventListing> getApprovedEvents() {
-        return eventListingRepository.findAll().stream()
-                .filter(e -> e.getStatus() == ListingStatus.APPROVED)
-                .collect(Collectors.toList());
-    }
-
-    public List<EventListing> getTopUpcomingEvents(int limit) {
-        return getApprovedEvents().stream()
-                .limit(limit)
-                .collect(Collectors.toList());
-    }
-
-    public List<EventListing> getUpcomingEvents(String username) {
-        return getApprovedEvents();
-    }
-
-    public List<EventListing> getOrganizerEvents(String username) {
-        return eventListingRepository.findAll().stream()
-                .filter(e -> username.equals(e.getOrganizerUsername()))
-                .collect(Collectors.toList());
     }
 
     public EventListing createEvent(String username, EventListing event) {
@@ -68,26 +56,63 @@ public class EventService {
         return eventListingRepository.save(event);
     }
 
-    public EventBooking bookEvent(String eventId, String username, int tickets, String attendeeName, String email, String phone) {
-        EventListing event = getEventById(eventId);
-        
-        EventBooking booking = EventBooking.builder()
-                .eventId(eventId)
-                .eventTitle(event.getTitle())
-                .userId(username)
-                .numberOfTickets(tickets)
-                .customerName(attendeeName)
-                .customerEmail(email)
-                .customerPhone(phone)
-                .bookingDate(LocalDateTime.now())
-                .build();
+    public EventListing updateEvent(String id, String username, EventListing updatedEvent, String newBannerUrl) {
+        EventListing existing = getEventById(id);
 
-        EventBooking savedBooking = eventBookingRepository.save(booking);
-        
-        notificationService.sendNotification(event.getOrganizerUsername(), "New Event Booking",
-                attendeeName + " booked " + tickets + " ticket(s) for '" + event.getTitle() + "'.", "/events/manage");
+        if (!existing.getOrganizerUsername().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to edit this event");
+        }
 
-        return savedBooking;
+        existing.setTitle(updatedEvent.getTitle());
+        existing.setDescription(updatedEvent.getDescription());
+        existing.setEventType(updatedEvent.getEventType());
+        existing.setOrganizationName(updatedEvent.getOrganizationName());
+        existing.setCity(updatedEvent.getCity());
+        existing.setEventDate(updatedEvent.getEventDate());
+        existing.setTicketPrice(updatedEvent.getTicketPrice());
+
+        if (newBannerUrl != null && !newBannerUrl.isEmpty()) {
+            existing.setBannerUrl(newBannerUrl);
+        } else if (updatedEvent.getBannerUrl() != null && !updatedEvent.getBannerUrl().isEmpty()) {
+            existing.setBannerUrl(updatedEvent.getBannerUrl());
+        }
+
+        existing.setStatus(ListingStatus.PENDING);
+        existing.setRejectionReason(null);
+
+        return eventListingRepository.save(existing);
+    }
+
+    public void deleteOrganizerEvent(String id, String username) {
+        EventListing event = getEventById(id);
+        if (!event.getOrganizerUsername().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to delete this event");
+        }
+        eventListingRepository.deleteById(id);
+    }
+
+    public void moderateEvent(String id, boolean approve, String reason) {
+        EventListing event = getEventById(id);
+        event.setStatus(approve ? ListingStatus.APPROVED : ListingStatus.REJECTED);
+        if (!approve) {
+            event.setRejectionReason(reason != null ? reason : "Moderation policy criteria not met.");
+        } else {
+            event.setRejectionReason(null);
+        }
+        eventListingRepository.save(event);
+    }
+
+    public void revokeEventApproval(String id, String reason) {
+        EventListing event = getEventById(id);
+        event.setStatus(ListingStatus.REJECTED);
+        event.setRejectionReason(reason != null && !reason.trim().isEmpty() ? reason : "Approval revoked by system administrator.");
+        eventListingRepository.save(event);
+    }
+
+    public List<EventListing> getOrganizerEvents(String username) {
+        return eventListingRepository.findAll().stream()
+                .filter(e -> username.equals(e.getOrganizerUsername()))
+                .collect(Collectors.toList());
     }
 
     public List<EventBooking> getUserBookings(String username) {
@@ -96,52 +121,28 @@ public class EventService {
                 .collect(Collectors.toList());
     }
 
-    public List<EventBooking> getEventBookingsForOrganizer(String organizerUsername) {
-        List<String> organizerEventIds = getOrganizerEvents(organizerUsername).stream()
+    public List<EventBooking> getEventBookingsForOrganizer(String username) {
+        List<String> organizerEventIds = getOrganizerEvents(username).stream()
                 .map(EventListing::getId)
-                .toList();
+                .collect(Collectors.toList());
 
         return eventBookingRepository.findAll().stream()
                 .filter(b -> organizerEventIds.contains(b.getEventId()))
                 .collect(Collectors.toList());
     }
 
-    public void deleteEvent(String id) {
-        eventListingRepository.deleteById(id);
-    }
-
-    public void moderateEvent(String eventId, boolean approve, String rejectionReason) {
+    public EventBooking bookEvent(String username, String eventId, int numberOfTickets, String fullName, String email, String phone) {
         EventListing event = getEventById(eventId);
-
-        if (approve) {
-            event.setStatus(ListingStatus.APPROVED);
-            event.setRejectionReason(null);
-            notificationService.sendNotification(event.getOrganizerUsername(), "Event Approved", 
-                    "Your event '" + event.getTitle() + "' has been approved and published.", "/events");
-        } else {
-            event.setStatus(ListingStatus.REJECTED);
-            event.setRejectionReason(rejectionReason);
-            notificationService.sendNotification(event.getOrganizerUsername(), "Event Rejected", 
-                    "Your event '" + event.getTitle() + "' was rejected. Reason: " + rejectionReason, "/events/manage");
-        }
-        eventListingRepository.save(event);
-    }
-
-    public void revokeEventApproval(String eventId, String rejectionReason) {
-        EventListing event = getEventById(eventId);
-
-        event.setStatus(ListingStatus.REJECTED);
-        event.setRejectionReason(rejectionReason);
-        eventListingRepository.save(event);
-
-        notificationService.sendNotification(event.getOrganizerUsername(), "Event Approval Revoked", 
-                "Your event '" + event.getTitle() + "' approval was revoked. Reason: " + rejectionReason, "/events/manage");
-    }
-    
-    public List<EventListing> getRejectedEvents() {
-        return eventListingRepository.findAll().stream()
-                .filter(e -> e.getStatus() == ListingStatus.REJECTED)
-                .collect(Collectors.toList());
+        EventBooking booking = EventBooking.builder()
+                .eventId(event.getId())
+                .eventTitle(event.getTitle())
+                .userId(username)
+                .numberOfTickets(numberOfTickets)
+                .customerName(fullName)
+                .customerEmail(email)
+                .customerPhone(phone)
+                .bookingDate(LocalDateTime.now())
+                .build();
+        return eventBookingRepository.save(booking);
     }
 }
-
